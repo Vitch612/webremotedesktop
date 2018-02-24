@@ -1,0 +1,10 @@
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\bin\Debug\screenshot.dll.config
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\bin\Debug\screenshot.dll
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\bin\Debug\screenshot.pdb
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\bin\Debug\screenshot.xml
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\bin\Debug\screenshot.tlb
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\obj\Debug\screenshot.Resources.resources
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\obj\Debug\screenshot.vbproj.GenerateResource.Cache
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\obj\Debug\screenshot.dll
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\obj\Debug\screenshot.xml
+C:\Users\Alain\Documents\Visual Studio 2010\Projects\screenshot\screenshot\obj\Debug\screenshot.pdb

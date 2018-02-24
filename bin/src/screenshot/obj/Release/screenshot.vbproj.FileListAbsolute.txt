@@ -1,0 +1,12 @@
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\bin\Release\screenshot.dll.config
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\bin\Release\screenshot.dll
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\bin\Release\screenshot.pdb
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\bin\Release\screenshot.xml
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\bin\Release\screenshot.tlb
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\obj\Release\Interop.IWshRuntimeLibrary.dll
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\obj\Release\screenshot.vbproj.ResolveComReference.cache
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\obj\Release\screenshot.Resources.resources
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\obj\Release\screenshot.vbproj.GenerateResource.Cache
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\obj\Release\screenshot.dll
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\obj\Release\screenshot.xml
+C:\Users\Alain\documents\visual studio 2010\Projects\screenshot\screenshot\obj\Release\screenshot.pdb
