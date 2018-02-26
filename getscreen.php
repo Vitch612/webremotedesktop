@@ -1,5 +1,5 @@
 <?php
-
+include "comobject.php";
 class ResumeDownload {
   private $file;
   private $name;
@@ -228,7 +228,6 @@ if ($count>9)
   $count=0;
 $_SESSION["count"]=$count;
 session_write_close();
-$com = new COM("screenshot.grabscreen");
 $com->grab("C:/web/windows/tmp/screenshot$sid$count.jpeg",(int) $_REQUEST["w"],(int) $_REQUEST["h"],80);
 //resize_image("C:/web/windows/screenshot.jpeg",$_REQUEST["w"],$_REQUEST["h"]);
 //set_time_limit(0);

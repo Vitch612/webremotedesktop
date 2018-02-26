@@ -1,5 +1,5 @@
 <?php
-$com = new COM("screenshot.grabscreen");
+include "comobject.php";
 $p=$com->getscreen_resolution();
 echo $p[0].",".$p[1];
 

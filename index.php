@@ -7,7 +7,10 @@ echo '<html>
 <head>
 <style>
 body {
-  background-color:black;
+  //background-color:black;
+}
+.controls {
+  width:100%;
 }
 .message {
   display:none;
@@ -60,6 +63,7 @@ body {
 </style>
 <script type="text/javascript" src="/windows/js/jquery.min.js"></script>
 <script type="text/javascript" src="/windows/js/interactions.js"></script>
+'.($mobile?'<script type="text/javascript" src="/windows/js/mobile.js"></script>':'').'
 <script>
 
 var maxwidth;
@@ -67,7 +71,7 @@ var maxheight;
 var displaywidth;
 var displayheight; 
 var timestamp;
-var refreshrate=0;
+var refreshrate=33;
 
 function setmsg(text) {
   $(".message").html(text);
@@ -172,22 +176,56 @@ $(document).ready(function() {
     //setmsg(homescreenwidth+"x"+homescreenheight+" --> "+displaywidth+"x"+displayheight+"<BR>canvas: "+$(".overlay")[0].width+"x"+$(".overlay")[0].height+"<BR>click: "+X+","+Y+"<BR>send: "+hX+","+hY);
     sendclick(hX,hY);
   });  
-  $(".overlay").dblclick(function(e) {
-    var offset = $(this).offset();
-    var X = (e.pageX - offset.left);
-    var Y = (e.pageY - offset.top);
-  });  
+  
+  $( ".mousebutton" ).change(function() {
+    switch($(this).val()) {
+      case "mouseleft":
+        break;
+      case "mouseright":
+        break;
+    }
+  });
+  
+  $( ".mouseclick" ).change(function() {
+    switch($(this).val()) {
+      case "singleclick":
+        break;
+      case "doubleclick":
+        break;
+    }
+  });
+
+  $(".btnmute").click(function() {
+    sendmute();
+  });
+  $(".btnvoldown").click(function() {
+    sendvoldown();
+  });
+  $(".btnvolup").click(function() {
+    sendvolup();
+  });
 });
 </script>
 </head>
 <body style="padding:0;margin:0">
 <div class="content" style="padding:0;margin:0;text-align:center;">
   <div class="message"></div>
-  <div class="cvdiv">
+  <div class="cvdiv">    
     <canvas class="overlay"></canvas>
     <img id="mousepointer" src="/windows/cursor.png" style="z-index:0;position:absolute;"/>
     <img class="first" src=""/><img class="second" src=""/>
   </div>
+</div>
+<div class="controls">
+<input class="btnmute" type="button" value="&#128266;"/><BR>
+<input class="btnvolup" type="button" value="&#x25B2;"/><BR>
+<input class="btnvoldown" type="button" value="&#x25BC;"/><BR>
+Mouse Button<BR>
+<input class="mousebutton" type="radio" name="mousebutton" value="mouseleft" checked>left<BR>
+<input class="mousebutton" type="radio" name="mousebutton" value="mouseright">right<BR>
+Click<BR>
+<input class="mouseclick" type="radio" name="mouseclick" value="singleclick" checked>Simple<BR>
+<input class="mouseclick" type="radio" name="mouseclick" value="doubleclick">Double<BR>
 </div>
 </body>
 </html>';
