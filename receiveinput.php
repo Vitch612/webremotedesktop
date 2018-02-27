@@ -1,29 +1,25 @@
 <?php
-include "comobject.php";
+include "serverinteract.php";
 $op=$_REQUEST["action"];
+
 if ($op=="click") {
-  $p=$com->mouseclickl((int)$_REQUEST["x"],(int)$_REQUEST["y"]);
+  send("smcll".$_REQUEST["x"].",".$_REQUEST["y"]);
 }
 if ($op=="clickr") {
-  $p=$com->mouseclickr((int)$_REQUEST["x"],(int)$_REQUEST["y"]);
+  send("smclr".$_REQUEST["x"].",".$_REQUEST["y"]);
 }
 if ($op=="clickd") {
-  $p=$com->mousedblclickl((int)$_REQUEST["x"],(int)$_REQUEST["y"]);
+  send("smdcl".$_REQUEST["x"].",".$_REQUEST["y"]);
 }
 if ($op=="clickrd") {
-  $p=$com->mousedblclickl((int)$_REQUEST["x"],(int)$_REQUEST["y"]);
+  send("smdcr".$_REQUEST["x"].",".$_REQUEST["y"]);
 }
 if ($op=="mute") {
-  $p=$com->mute();
+  send("svmut");
 }
 if ($op=="voldown") {
-  $p=$com->volumedown();
+  send("svodo");
 }
 if ($op=="volup") {
-  $p=$com->volumeup();
+  send("svoup");
 }
-
-
-  
-
-

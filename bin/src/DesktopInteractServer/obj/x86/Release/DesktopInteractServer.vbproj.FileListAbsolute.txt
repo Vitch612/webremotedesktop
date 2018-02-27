@@ -1,0 +1,9 @@
+C:\web\windows\bin\src\DesktopInteractServer\bin\Release\DesktopInteractServer.exe.config
+C:\web\windows\bin\src\DesktopInteractServer\bin\Release\DesktopInteractServer.exe
+C:\web\windows\bin\src\DesktopInteractServer\bin\Release\DesktopInteractServer.pdb
+C:\web\windows\bin\src\DesktopInteractServer\bin\Release\DesktopInteractServer.xml
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Release\DesktopInteractServer.Resources.resources
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Release\DesktopInteractServer.vbproj.GenerateResource.Cache
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Release\DesktopInteractServer.exe
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Release\DesktopInteractServer.xml
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Release\DesktopInteractServer.pdb

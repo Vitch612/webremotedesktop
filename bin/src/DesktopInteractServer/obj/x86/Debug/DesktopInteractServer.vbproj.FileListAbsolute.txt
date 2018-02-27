@@ -1,0 +1,20 @@
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\bin\Debug\DesktopInteractServer.exe.config
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\bin\Debug\DesktopInteractServer.exe
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\bin\Debug\DesktopInteractServer.pdb
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\bin\Debug\DesktopInteractServer.xml
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.vbprojResolveAssemblyReference.cache
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.Resources.resources
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.vbproj.GenerateResource.Cache
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.exe
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.xml
+c:\users\board-x\documents\visual studio 2010\Projects\DesktopInteractServer\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.pdb
+C:\web\windows\bin\src\DesktopInteractServer\bin\Debug\DesktopInteractServer.exe.config
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.exe
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.xml
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.pdb
+C:\web\windows\bin\src\DesktopInteractServer\bin\Debug\DesktopInteractServer.exe
+C:\web\windows\bin\src\DesktopInteractServer\bin\Debug\DesktopInteractServer.pdb
+C:\web\windows\bin\src\DesktopInteractServer\bin\Debug\DesktopInteractServer.xml
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.vbprojResolveAssemblyReference.cache
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.Resources.resources
+C:\web\windows\bin\src\DesktopInteractServer\obj\x86\Debug\DesktopInteractServer.vbproj.GenerateResource.Cache

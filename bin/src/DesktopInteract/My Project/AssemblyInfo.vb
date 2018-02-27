@@ -8,17 +8,17 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("DesktopInteraction")> 
-<Assembly: AssemblyDescription("Utilities to interact with the current desktop session")> 
+<Assembly: AssemblyTitle("ApplicationLauncher for Services")> 
+<Assembly: AssemblyDescription("")> 
 <Assembly: AssemblyCompany("")> 
-<Assembly: AssemblyProduct("DesktopInteraction")> 
+<Assembly: AssemblyProduct("")> 
 <Assembly: AssemblyCopyright("")> 
 <Assembly: AssemblyTrademark("")> 
 
 <Assembly: ComVisible(True)> 
 
 'The following GUID is for the ID of the typelib if this project is exposed to COM
-<Assembly: Guid("be1f699d-5307-44a8-bbb6-d275fa129778")> 
+<Assembly: Guid("88093ff9-9ad9-432c-be53-0700f5832b6b")> 
 
 ' Version information for an assembly consists of the following four values:
 '
@@ -29,7 +29,6 @@ Imports System.Runtime.InteropServices
 '
 ' You can specify all the values or you can default the Build and Revision Numbers 
 ' by using the '*' as shown below:
-' <Assembly: AssemblyVersion("1.0.*")> 
 
 <Assembly: AssemblyVersion("1.0.0.0")> 
 <Assembly: AssemblyFileVersion("1.0.0.0")> 

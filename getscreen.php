@@ -1,5 +1,5 @@
 <?php
-include "comobject.php";
+include "serverinteract.php";
 class ResumeDownload {
   private $file;
   private $name;
@@ -216,7 +216,6 @@ function resize_image($file, $w, $h) {
   imagecopyresampled($dst, $src, 0, 0, 0, 0, $newwidth, $newheight, $width, $height);
   imagejpeg($dst,$file,50);
 }
-
 $count=0;
 session_start();
 $sid=substr(session_id(),21);
@@ -228,12 +227,13 @@ if ($count>9)
   $count=0;
 $_SESSION["count"]=$count;
 session_write_close();
-$com->grab("C:/web/windows/tmp/screenshot$sid$count.jpeg",(int) $_REQUEST["w"],(int) $_REQUEST["h"],80);
-//resize_image("C:/web/windows/screenshot.jpeg",$_REQUEST["w"],$_REQUEST["h"]);
-//set_time_limit(0);
-$download = new ResumeDownload("C:/web/windows/tmp/screenshot$sid$count.jpeg");
-$download->process();
-unset($download);
-unlink("C:/web/windows/tmp/screenshot$sid$count.jpeg");
 
-
+if (send("gscre".substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"))."/tmp/screenshot$sid$count.jpeg,".$_REQUEST["w"].",".$_REQUEST["h"].",80")=="1") {
+  $download = new ResumeDownload(substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"))."/tmp/screenshot$sid$count.jpeg");
+  $download->process();
+  unset($download);
+  unlink(substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"))."/tmp/screenshot$sid$count.jpeg");
+} else {
+  $download = new ResumeDownload("C:/web/windows/error.png");
+  $download->process();  
+}
