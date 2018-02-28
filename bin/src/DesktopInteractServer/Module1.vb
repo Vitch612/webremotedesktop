@@ -9,10 +9,11 @@ Imports System.Diagnostics
 Imports System.Net.Sockets
 Imports System.Net
 Imports System.ComponentModel
+Imports System.Text
 
 Module Module1
 
-    Private Sub log(ByVal msg As String)
+    Private Sub log(ByVal msg As String, Optional ByVal type As EventLogEntryType = EventLogEntryType.Error)
         Dim appName As String = "DesktopInteractServer"
         Dim eventData As EventSourceCreationData
         eventData = New EventSourceCreationData(appName, "Application")
@@ -21,7 +22,7 @@ Module Module1
         End If
         Dim eLog As New EventLog()
         eLog.Source = appName
-        eLog.WriteEntry(msg, EventLogEntryType.Error)
+        eLog.WriteEntry(msg, type)
     End Sub
 
     Private Sub subThread(ByVal _TCPClient As TcpClient)
@@ -32,7 +33,7 @@ Module Module1
             Dim datastring As String = Nothing
             Dim i As Int32
             i = stream.Read(bytes, 0, bytes.Length)
-            While (i <> 0)
+            If i > 0 Then
                 datastring = System.Text.Encoding.ASCII.GetString(bytes, 0, i)
                 Dim operation As String = datastring.Substring(0, 5)
                 Dim parameters As String()
@@ -45,6 +46,14 @@ Module Module1
                 Select Case operation
                     Case "txtsd"
                         Functionality.sendText(parameters(0))
+                    Case "mousd"
+                        Functionality.mousemove(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+                        Functionality.mousedown()
+                    Case "mousu"
+                        Functionality.mousemove(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+                        Functionality.mouseup()
+                    Case "mousm"
+                        Functionality.mousemove(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
                     Case "gscre"
                         If Functionality.grab(parameters(0), Convert.ToInt32(parameters(1)), Convert.ToInt32(parameters(2)), CType(Convert.ToInt32(parameters(3)), Long)) Then
                             reply = "1"
@@ -76,12 +85,7 @@ Module Module1
                     Dim msg As Byte() = System.Text.Encoding.ASCII.GetBytes(reply)
                     stream.Write(msg, 0, msg.Length)
                 End If
-                If (stream.DataAvailable) Then
-                    i = stream.Read(bytes, 0, bytes.Length)
-                Else
-                    i = 0
-                End If
-            End While
+            End If
             _TCPClient.Close()
         Catch ex As Exception
             log(ex.Message)
@@ -91,75 +95,6 @@ Module Module1
     Private timer As DateTime
     Private Const idletime = 1
 
-
-    'Public tcpClientConnected As New ManualResetEvent(False)
-    'Private Sub connectionHandler(ByVal ar As IAsyncResult)
-    '    Try
-    '        timer = Now
-    '        Dim _TCPListener As TcpListener = CType(ar.AsyncState, TcpListener)
-    '        Dim _TCPClient As TcpClient = _TCPListener.EndAcceptTcpClient(ar)
-    '        Dim stream As NetworkStream = _TCPClient.GetStream()
-    '        Dim bytes(128) As Byte
-    '        Dim datastring As String = Nothing
-    '        Dim i As Int32
-    '        i = stream.Read(bytes, 0, bytes.Length)
-    '        While (i <> 0)
-    '            datastring = System.Text.Encoding.ASCII.GetString(bytes, 0, i)
-    '            Dim operation As String = datastring.Substring(0, 5)
-    '            Dim parameters As String()
-    '            If operation.Equals("txtsd") Then
-    '                parameters = {datastring.Substring(5)}
-    '            Else
-    '                parameters = datastring.Substring(5).Split(",")
-    '            End If
-    '            Dim reply As String
-    '            Select Case operation
-    '                Case "txtsd"
-    '                    Functionality.sendText(parameters(0))
-    '                Case "gscre"
-    '                    If Functionality.grab(parameters(0), Convert.ToInt32(parameters(1)), Convert.ToInt32(parameters(2)), CType(Convert.ToInt32(parameters(3)), Long)) Then
-    '                        reply = "1"
-    '                    Else
-    '                        reply = "0"
-    '                    End If
-    '                Case "gscrr"
-    '                    Dim retval As Integer() = Functionality.getscreen_resolution()
-    '                    reply = retval(0) & "," & retval(1)
-    '                Case "gmpos"
-    '                    Dim retval As Integer() = Functionality.getmousepos()
-    '                    reply = retval(0) & "," & retval(1)
-    '                Case "smcll"
-    '                    Functionality.mouseclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-    '                Case "smclr"
-    '                    Functionality.mouseclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-    '                Case "smdcl"
-    '                    Functionality.mousedblclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-    '                Case "smdcr"
-    '                    Functionality.mousedblclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-    '                Case "svmut"
-    '                    Functionality.mute()
-    '                Case "svodo"
-    '                    Functionality.volumedown()
-    '                Case "svoup"
-    '                    Functionality.volumeup()
-    '            End Select
-    '            If Not reply Is Nothing Then
-    '                Dim msg As Byte() = System.Text.Encoding.ASCII.GetBytes(reply)
-    '                stream.Write(msg, 0, msg.Length)
-    '            End If
-    '            If (stream.DataAvailable) Then
-    '                i = stream.Read(bytes, 0, bytes.Length)
-    '            Else
-    '                i = 0
-    '            End If
-    '        End While
-    '        _TCPClient.Close()
-    '    Catch ex As Exception
-    '        log(ex.Message)
-    '    End Try
-    'End Sub
-
-
     Private Sub ThreadTask()
         Try
             timer = Now
@@ -167,15 +102,11 @@ Module Module1
             Dim localPort As Int32 = 8888
             Dim localAddr As IPAddress = IPAddress.Parse("192.168.137.1")
             _TCPListener = New TcpListener(localAddr, localPort)
-            _TCPListener.Server.ReceiveTimeout = 10
-            _TCPListener.Server.SendTimeout = 10
-            _TCPListener.Server.LingerState = New System.Net.Sockets.LingerOption(False, 0)
-            _TCPListener.Start(512)
-
-            '_TCPListener.BeginAcceptTcpClient(New AsyncCallback(AddressOf connectionHandler), _TCPListener)
-
-
-
+            '_TCPListener.Server.ReceiveTimeout = 10
+            '_TCPListener.Server.SendTimeout = 10
+            '_TCPListener.Server.LingerState = New System.Net.Sockets.LingerOption(False, 0)
+            '_TCPListener.Start(512)
+            _TCPListener.Start()
             Dim keepgoing As Boolean = True
             Do While keepgoing
                 If _TCPListener.Pending() Then
@@ -216,10 +147,10 @@ Module Module1
                 graphicsHandle.InterpolationMode = InterpolationMode.HighQualityBilinear
                 graphicsHandle.DrawImage(OldImage, 0, 0, newWidth, newHeight)
             End Using
-            Dim myEncoder As Encoder
+            Dim myEncoder As System.Drawing.Imaging.Encoder
             Dim myEncoderParameter As EncoderParameter
             Dim myEncoderParameters As EncoderParameters
-            myEncoder = Encoder.Quality
+            myEncoder = System.Drawing.Imaging.Encoder.Quality
             myEncoderParameters = New EncoderParameters(1)
             myEncoderParameter = New EncoderParameter(myEncoder, CType(quality, Int32))
             myEncoderParameters.Param(0) = myEncoderParameter
@@ -232,7 +163,7 @@ Module Module1
         End Sub
 
         Public Shared Sub sendText(ByVal text As String)
-            ScreenCapture.User32.SendString(text)
+            ScreenCapture.User32.sendkeys(text)
         End Sub
 
         Public Shared Function getscreen_resolution() As Integer()
@@ -268,6 +199,14 @@ Module Module1
             retval(1) = p.Y
             Return retval
         End Function
+
+        Public Shared Sub mousedown()
+            ScreenCapture.User32.SendDown()
+        End Sub
+
+        Public Shared Sub mouseup()
+            ScreenCapture.User32.SendUp()
+        End Sub
 
         Public Shared Sub mousemove(ByVal x, ByVal y)
             Dim p As System.Drawing.Point = New System.Drawing.Point(x, y)
@@ -393,72 +332,117 @@ Module Module1
                 Public bottom As Integer
             End Structure
 
-            <StructLayout(LayoutKind.Explicit, pack:=1, Size:=28)> _
-            Friend Structure INPUT
-                <FieldOffset(0)> Public dwType As InputType
-                <FieldOffset(4)> Public mi As MOUSEINPUT
-                <FieldOffset(4)> Public ki As KEYBDINPUT
-                <FieldOffset(4)> Public hi As HARDWAREINPUT
-            End Structure
 
-            <StructLayout(LayoutKind.Sequential, pack:=1)> _
-            Friend Structure MOUSEINPUT
-                Public dx As Int32
-                Public dy As Int32
-                Public mouseData As UInt32
-                Public dwFlags As MOUSEEVENTF
-                Public time As UInt32
-                Public dwExtraInfo As IntPtr
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential, pack:=1)> _
-            Friend Structure KEYBDINPUT
-                Public wVk As UShort
-                Public wScan As UShort
-                Public dwFlags As KEYEVENTF
-                Public time As UInteger
-                Public dwExtraInfo As IntPtr
-            End Structure
-
-            <StructLayout(LayoutKind.Sequential, pack:=1)> _
-            Friend Structure HARDWAREINPUT
-                Public uMsg As UInt32
-                Public wParamL As UInt16
-                Public wParamH As UInt16
-            End Structure
-
-            Friend Enum InputType As UInt32
-                Mouse = 0
-                Keyboard = 1
-                Hardware = 2
-            End Enum
-
-            <Flags()> _
-            Friend Enum MOUSEEVENTF As UInt32
-                MOVE = &H1
-                LEFTDOWN = &H2
-                LEFTUP = &H4
-                RIGHTDOWN = &H8
-                RIGHTUP = &H10
-                MIDDLEDOWN = &H20
-                MIDDLEUP = &H40
-                XDOWN = &H80
-                XUP = &H100
-                VIRTUALDESK = &H400
-                WHEEL = &H800
-                ABSOLUTE = &H8000
-            End Enum
-
-            <Flags()> _
-            Public Enum KEYEVENTF As UInt32
-                EXTENDEDKEY = 1
-                KEYUP = 2
-                [UNICODE] = 4
-                SCANCODE = 8
-            End Enum
-            Const KEYEVENTF_UNICODE As UInt32 = &H4
             Const KEYEVENTF_KEYUP As UInt32 = &H2
+            'Const KEYEVENTF_UNICODE As UInt32 = &H4
+            'Const KEYEVENTF_EXTENDEDKEY As UInt32 = &H1
 
+            '<StructLayout(LayoutKind.Explicit)> _
+            'Friend Structure INPUT
+            '    <FieldOffset(0)> Public dwType As InputType
+            '    <FieldOffset(4)> Public mi As MOUSEINPUT
+            '    <FieldOffset(4)> Public ki As KEYBDINPUT
+            '    <FieldOffset(4)> Public hi As HARDWAREINPUT
+            'End Structure
+
+            '<StructLayout(LayoutKind.Sequential)> _
+            'Friend Structure MOUSEINPUT
+            '    Public dx As Int32
+            '    Public dy As Int32
+            '    Public mouseData As UInt32
+            '    Public dwFlags As MOUSEEVENTF
+            '    Public time As UInt32
+            '    Public dwExtraInfo As IntPtr
+            'End Structure
+
+            '<StructLayout(LayoutKind.Sequential)> _
+            'Friend Structure KEYBDINPUT
+            '    Public wVk As UShort
+            '    Public wScan As UShort
+            '    Public dwFlags As KEYEVENTF
+            '    Public time As UInteger
+            '    Public dwExtraInfo As IntPtr
+            'End Structure
+
+            '<StructLayout(LayoutKind.Sequential, Pack:=8)> _
+            'Friend Structure HARDWAREINPUT
+            '    Public uMsg As UInt32
+            '    Public wParamL As UInt16
+            '    Public wParamH As UInt16
+            'End Structure
+
+            'Friend Enum InputType As UInt32
+            '    Mouse = 0
+            '    Keyboard = 1
+            '    Hardware = 2
+            'End Enum
+
+            '<Flags()> _
+            'Friend Enum MOUSEEVENTF As UInt32
+            '    MOVE = &H1
+            '    LEFTDOWN = &H2
+            '    LEFTUP = &H4
+            '    RIGHTDOWN = &H8
+            '    RIGHTUP = &H10
+            '    MIDDLEDOWN = &H20
+            '    MIDDLEUP = &H40
+            '    XDOWN = &H80
+            '    XUP = &H100
+            '    VIRTUALDESK = &H400
+            '    WHEEL = &H800
+            '    ABSOLUTE = &H8000
+            'End Enum
+
+            '<Flags()> _
+            'Public Enum KEYEVENTF As UInt32
+            '    EXTENDEDKEY = 1
+            '    KEYUP = 2
+            '    [UNICODE] = 4
+            '    SCANCODE = 8
+            'End Enum
+
+            'Private Shared Sub SendString(ByVal s As String)
+            '    Dim _fwid As IntPtr = GetForegroundWindow()
+            '    Dim _dwtid As Integer = GetWindowThreadProcessId(_fwid, Nothing)
+            '    Dim _hkl As IntPtr = GetKeyboardLayout(_dwtid)
+
+            '    Dim inputs As New List(Of INPUT)
+            '    For Each c As Char In s
+            '        'Dim vkcode As UShort = VkKeyScanEx(c, _hkl)
+            '        'If (vkcode And &HFF) <> -1 Then
+            '        Dim keybinp As KEYBDINPUT
+            '        keybinp.wVk = 0
+            '        keybinp.wScan = Convert.ToUInt16(c)
+            '        keybinp.dwFlags = KEYEVENTF_UNICODE
+            '        keybinp.time = 0
+            '        keybinp.dwExtraInfo = GetMessageExtraInfo()
+            '        Dim inputonec As INPUT
+            '        inputonec.dwType = InputType.Keyboard
+            '        inputonec.ki = keybinp
+            '        inputs.Add(inputonec)
+            '        'End If
+            '        'If (vkcode And &HFF) <> -1 Then
+            '        'Dim keybinp As KEYBDINPUT
+            '        keybinp.wVk = 0
+            '        keybinp.wScan = Convert.ToUInt16(c)
+            '        keybinp.dwFlags = KEYEVENTF_UNICODE Or KEYEVENTF_KEYUP
+            '        keybinp.time = 0
+            '        keybinp.dwExtraInfo = GetMessageExtraInfo()
+            '        'Dim inputonec As INPUT
+            '        inputonec.dwType = InputType.Keyboard
+            '        inputonec.ki = keybinp
+            '        inputs.Add(inputonec)
+            '        'End If
+            '    Next
+            '    Dim inpar As INPUT() = inputs.ToArray()
+            '    If SendInput(Convert.ToUInt32(inpar.Length), inpar, Marshal.SizeOf(GetType(INPUT))) <> inputs.Count Then
+            '        Dim ex As Win32Exception = New Win32Exception(Marshal.GetLastWin32Error())
+            '        Throw New ApplicationException("Input Failed " & ex.Message, ex)
+            '    End If
+            'End Sub
+            '
+            '<DllImport("user32.dll", SetLastError:=True)> Public Shared Function SendInput(ByVal cInputs As UInteger, ByRef pInputs As INPUT(), ByVal cbSize As Int32) As UInteger
+            'End Function
             Public Declare Function GetDesktopWindow Lib "user32.dll" () As IntPtr
             Public Declare Function GetWindowDC Lib "user32.dll" (ByVal hWnd As IntPtr) As IntPtr
             Public Declare Function ReleaseDC Lib "user32.dll" (ByVal hWnd As IntPtr, ByVal hDC As IntPtr) As IntPtr
@@ -467,30 +451,36 @@ Module Module1
             Public Declare Auto Function GetCursorPos Lib "User32.dll" (ByRef lpPoint As Point) As Long
             Public Declare Sub keybd_event Lib "user32.dll" (ByVal bVk As Byte, ByVal bScan As Byte, ByVal dwFlags As UInteger, ByVal dwExtraInfo As Integer)
             Public Declare Function GetMessageExtraInfo Lib "user32.dll" () As IntPtr
-            <DllImport("user32.dll", SetLastError:=True)> Public Shared Function SendInput(ByVal cInputs As UInteger, ByRef pInputs As INPUT(), ByVal cbSize As Int32) As UInteger
+            Public Declare Function GetForegroundWindow Lib "user32" () As IntPtr
+            Public Declare Auto Function GetWindowThreadProcessId Lib "user32.dll" (ByVal hwnd As IntPtr, ByRef lpdwProcessId As Integer) As Integer            
+            Public Declare Function GetKeyboardLayout Lib "user32.dll" (ByVal idThread As Integer) As IntPtr
+            <DllImport("user32.dll")> Private Shared Function VkKeyScanEx(ByVal ch As Char, ByVal dwhkl As IntPtr) As Short
             End Function
+            <DllImport("user32.dll", CharSet:=CharSet.Unicode)> Private Shared Function VkKeyScanW(ByVal ch As Char) As Short
+            End Function
+            Public Declare Function MapVirtualKeyW Lib "user32.dll" (ByVal uCode As UInteger, ByVal uMapType As UInteger) As UInteger
+            Public Declare Function MapVirtualKeyExW Lib "user32.dll" (ByVal uCode As UInteger, ByVal uMapType As UInteger, ByVal dwhkl As IntPtr) As UInteger
 
-            Public Shared Sub SendString(ByVal s As String)
-                Dim inputs As New List(Of INPUT)
+            Public Shared Sub sendkeys(ByVal s As String)
+                Dim _fwid As IntPtr = GetForegroundWindow()
+                Dim _dwtid As Integer = GetWindowThreadProcessId(_fwid, Nothing)
+                Dim _hkl As IntPtr = GetKeyboardLayout(_dwtid)
                 For Each c As Char In s
-                    For Each keyUp As Boolean In New Boolean() {False, True}
-                        Dim keybinp As KEYBDINPUT
-                        keybinp.wVk = 0
-                        keybinp.wScan = Microsoft.VisualBasic.AscW(c)
-                        keybinp.dwFlags = KEYEVENTF_UNICODE Or If(keyUp, KEYEVENTF_KEYUP, 0)
-                        keybinp.time = 0
-                        keybinp.dwExtraInfo = IntPtr.Zero
-                        Dim inputonec As INPUT
-                        inputonec.dwType = InputType.Keyboard
-                        inputonec.ki = keybinp
-                        inputs.Add(inputonec)
-                    Next
+                    Dim exvkcode As Short = VkKeyScanEx(c, _hkl)
+                    Dim bVk As Byte = exvkcode And &HFF
+                    Dim dwFlags As UInteger = (exvkcode And &HFF00) >> 8
+                    Dim bScan As Byte = MapVirtualKeyExW(bVk, 4, _hkl)
+                    If (bScan) <> 0 Then
+                        If dwFlags = 1 Then
+                            keybd_event(16, 42, 0, IntPtr.Zero)
+                        End If
+                        keybd_event(bVk, bScan, 0, IntPtr.Zero)
+                        keybd_event(bVk, bScan, KEYEVENTF_KEYUP, IntPtr.Zero)
+                        If dwFlags = 1 Then
+                            keybd_event(16, 42, KEYEVENTF_KEYUP, IntPtr.Zero)
+                        End If
+                    End If
                 Next
-                log(Marshal.SizeOf(GetType(INPUT)))
-                If SendInput(Convert.ToUInt32(inputs.Count), inputs.ToArray(), Marshal.SizeOf(GetType(INPUT))) <> inputs.Count Then
-                    Dim ex As Win32Exception = New Win32Exception(Marshal.GetLastWin32Error())
-                    Throw New ApplicationException("Input Failed " & ex.Message, ex)
-                End If
             End Sub
 
             Public Shared Sub SendClick()

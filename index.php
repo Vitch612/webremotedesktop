@@ -222,13 +222,21 @@ $(document).ready(function() {
   });
   
 var isDragging = false;
+var canceldrag = true;
+var dragstep = 40;
 var startx=0;
 var starty=0;
+var lastx=0;
+var lasty=0;
 var mdown=false;
+function calcdistance(x0,y0,x1,y1) {
+  return Math.sqrt(Math.pow(Math.abs(x0-x1),2)+Math.pow(Math.abs(y0-y1),2));
+}
 $(".overlay")
 .mousedown(function(e) {
   if (e.which==1) {
     isDragging = false;
+    canceldrag = true;
     mdown=true;
     var offset = $(this).offset();
     var X = (e.pageX - offset.left);
@@ -236,7 +244,9 @@ $(".overlay")
     var hX=Math.round(homescreenwidth * X / displaywidth);
     var hY=Math.round(homescreenheight * Y / displayheight);
     startx=hX;
-    starty=hY;     
+    starty=hY;
+    lastx=hX;
+    lasty=hY;
   }
 })
 .mousemove(function(e) {
@@ -248,13 +258,17 @@ $(".overlay")
     var hY=Math.round(homescreenheight * Y / displayheight);
     if (!isDragging) {
       isDragging = true;
-      sendmousedown(startx,starty);
-      sendmousemove(hX,hY);
-      setmsg("drag start: "+hX+"x"+hY);
+      sendmousedown(startx,starty);      
+      //setmsg("drag start: "+hX+"x"+hY);
     } else  {
-      sendmousemove(hX,hY);
-      setmsg("dragging: "+hX+"x"+hY);
+      //setmsg("dragging: "+hX+"x"+hY);
     }
+    if (calcdistance(hX,hY,lastx,lasty)>dragstep) {
+      lastx=hX;
+      lasty=hY;
+      canceldrag=false;
+      sendmousemove(hX,hY);
+    }    
   }
  })
 .mouseup(function(e) {
@@ -267,13 +281,14 @@ $(".overlay")
     var Y = (e.pageY - offset.top);
     var hX=Math.round(homescreenwidth * X / displaywidth);
     var hY=Math.round(homescreenheight * Y / displayheight);  
-    if (wasDragging) {
+    if (wasDragging && !canceldrag) {
       sendmouseup(hX,hY);
-      setmsg("end dragging: "+hX+"x"+hY);
+      //setmsg("end dragging: "+hX+"x"+hY);
     } else {
       sendclick(hX,hY);
-      setmsg(homescreenwidth+"x"+homescreenheight+" --> "+displaywidth+"x"+displayheight+"<BR>canvas: "+$(".overlay")[0].width+"x"+$(".overlay")[0].height+"<BR>click: "+X+","+Y+"<BR>send: "+hX+","+hY);
+      //setmsg(homescreenwidth+"x"+homescreenheight+" --> "+displaywidth+"x"+displayheight+"<BR>canvas: "+$(".overlay")[0].width+"x"+$(".overlay")[0].height+"<BR>click: "+X+","+Y+"<BR>send: "+hX+","+hY);
     }
+    canceldrag=true;
   }
 })
 .on("touchstart",function(e) {
@@ -296,13 +311,16 @@ $(".overlay")
   var hY=Math.round(homescreenheight * Y / displayheight);  
   if (!isDragging) {
     isDragging = true;
-    sendmousedown(startx,starty);
-    sendmousemove(hX,hY);
-    setmsg("drag start: "+hX+"x"+hY);
+    sendmousedown(startx,starty);    
+    //setmsg("drag start: "+hX+"x"+hY);
   } else  {
-    sendmousemove(hX,hY);
-    setmsg("dragging: "+hX+"x"+hY);
+    //setmsg("dragging: "+hX+"x"+hY);
   }
+  if (calcdistance(hX,hY,lastx,lasty)>dragstep) {
+    lastx=hX;
+    lasty=hY;
+    sendmousemove(hX,hY);
+  } 
 })
 .on("touchend",function(e) {
   var wasDragging = isDragging;
@@ -315,7 +333,7 @@ $(".overlay")
   var hY=Math.round(homescreenheight * Y / displayheight);  
   if (wasDragging) {
     sendmouseup(hX,hY);
-    setmsg("end dragging: "+hX+"x"+hY);
+    //setmsg("end dragging: "+hX+"x"+hY);
   }
 });
 
@@ -328,7 +346,7 @@ $(".overlay")
   });
   $(document).on("keypress",function(e) {
     if (overcanvas) {
-      alert(e.which);
+      sendtext(String.fromCharCode(e.which));      
       e.preventDefault();
       return false;
     }

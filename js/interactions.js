@@ -64,6 +64,7 @@ function sendmousedown(mx,my) {
     data: {action:sendaction,x:mx,y:my}
   }).done(getmouse);
 }
+
 function sendmousemove(mx,my) {
   var sendaction="mousem";
   $.ajax({
@@ -72,6 +73,7 @@ function sendmousemove(mx,my) {
     data: {action:sendaction,x:mx,y:my}
   }).done(getmouse);
 }
+
 function sendmouseup(mx,my) {
   var sendaction="mouseu";
   $.ajax({
