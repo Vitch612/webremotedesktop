@@ -21,7 +21,7 @@ body {
   font-size:14px;
 }
 .message {
-  display:block;
+  display:none;
   position:relative;
   top:0;
   left:0;
@@ -68,6 +68,17 @@ body {
 .content {
   position:relative;
 }
+.formheader {
+  display:block;
+  margin-top:10px;
+  font-weight:bold;
+}
+.formelement {
+  margin-bottom:8px;
+}
+.drawfps {
+  margin-top:10px;
+}
 
 </style>
 <script type="text/javascript" src="'.$base.'/js/jquery.min.js"></script>
@@ -106,7 +117,9 @@ function drawmouse() {
     if (prevx!=mousedposx || prevy!=mousedposy) {
       drawpointer(prevx,prevy);
     }
-    drawfps();
+    if ($(".drawfps").prop("checked")) {
+      drawfps();
+    }    
   }
   getmouse();
   setTimeout(drawmouse,50);
@@ -125,7 +138,6 @@ var fps="NA";
 function drawfps() {
   var c = $(".overlay")[0];
   var ctx = c.getContext("2d");
-  var img = document.getElementById("mousepointer");
   ctx.fillStyle = "#FFFFFF";
   ctx.fillRect(5,5,310,30);
   ctx.font = "30px Arial";
@@ -162,7 +174,7 @@ $(document).ready(function() {
     else
       newts=0;
     setTimeout(function() {
-      gotframe();
+      if ($(".drawfps").is("checked")) gotframe();
       timestamp=new Date().getTime();
       $(".first").show();
       $(".second").hide();
@@ -189,7 +201,7 @@ $(document).ready(function() {
     else
       newts=0;
     setTimeout(function() {
-      gotframe();
+      if ($(".drawfps").prop("checked")) gotframe();
       timestamp=new Date().getTime();
       $(".first").hide();
       $(".second").show();
@@ -223,7 +235,7 @@ $(document).ready(function() {
   
 var isDragging = false;
 var canceldrag = true;
-var dragstep = 40;
+var dragstep = 20;
 var startx=0;
 var starty=0;
 var lastx=0;
@@ -247,6 +259,7 @@ $(".overlay")
     starty=hY;
     lastx=hX;
     lasty=hY;
+    sendmousemove(hX,hY);
   }
 })
 .mousemove(function(e) {
@@ -258,10 +271,8 @@ $(".overlay")
     var hY=Math.round(homescreenheight * Y / displayheight);
     if (!isDragging) {
       isDragging = true;
-      sendmousedown(startx,starty);      
-      //setmsg("drag start: "+hX+"x"+hY);
-    } else  {
-      //setmsg("dragging: "+hX+"x"+hY);
+      sendmousemove(hX,hY);
+      sendmousedown(startx,starty);
     }
     if (calcdistance(hX,hY,lastx,lasty)>dragstep) {
       lastx=hX;
@@ -282,11 +293,10 @@ $(".overlay")
     var hX=Math.round(homescreenwidth * X / displaywidth);
     var hY=Math.round(homescreenheight * Y / displayheight);  
     if (wasDragging && !canceldrag) {
+      sendmousemove(hX,hY);
       sendmouseup(hX,hY);
-      //setmsg("end dragging: "+hX+"x"+hY);
     } else {
       sendclick(hX,hY);
-      //setmsg(homescreenwidth+"x"+homescreenheight+" --> "+displaywidth+"x"+displayheight+"<BR>canvas: "+$(".overlay")[0].width+"x"+$(".overlay")[0].height+"<BR>click: "+X+","+Y+"<BR>send: "+hX+","+hY);
     }
     canceldrag=true;
   }
@@ -311,10 +321,8 @@ $(".overlay")
   var hY=Math.round(homescreenheight * Y / displayheight);  
   if (!isDragging) {
     isDragging = true;
+    sendmousemove(hX,hY);
     sendmousedown(startx,starty);    
-    //setmsg("drag start: "+hX+"x"+hY);
-  } else  {
-    //setmsg("dragging: "+hX+"x"+hY);
   }
   if (calcdistance(hX,hY,lastx,lasty)>dragstep) {
     lastx=hX;
@@ -332,8 +340,8 @@ $(".overlay")
   var hX=Math.round(homescreenwidth * X / displaywidth);
   var hY=Math.round(homescreenheight * Y / displayheight);  
   if (wasDragging) {
+    sendmousemove(hX,hY);
     sendmouseup(hX,hY);
-    //setmsg("end dragging: "+hX+"x"+hY);
   }
 });
 
@@ -352,7 +360,8 @@ $(".overlay")
     }
   });
   $(".sendtext").click(function() {
-    sendtext($(".texttosend").val());
+    alert($(".drawfps").is("checked"));
+    //sendtext($(".texttosend").val());
   });
   $(".btnmute").click(function() {
     sendmute();
@@ -363,6 +372,13 @@ $(".overlay")
   $(".btnvolup").click(function() {
     sendvolup();
   });
+  $(".drawfps").change(function() {
+    if (!$(".drawfps").prop("checked")) {
+      var c = $(".overlay")[0];
+      var ctx = c.getContext("2d");
+      ctx.clearRect(5,5,310,30);
+    }
+  });
 });
 </script>
 </head>
@@ -371,22 +387,25 @@ $(".overlay")
 <div class="content" style="padding:0;margin:0;text-align:center;">  
   <div class="cvdiv">
     <canvas class="overlay"></canvas>
-    <img id="mousepointer" src="/windows/cursor.png" style="z-index:0;position:absolute;"/>
-    <img class="first" src=""/><img class="second" src=""/>
+    <img id="mousepointer" src="/windows/cursor.png" style="z-index:0;position:absolute;">
+    <img class="first" src=""/><img class="second" src="">
   </div>
 </div>
 <div class="controls">
-<input class="btnmute" type="button" value="&#128266;"/><BR>
-<input class="btnvolup" type="button" value="&#x25B2;"/><BR>
-<input class="btnvoldown" type="button" value="&#x25BC;"/><BR>
-Mouse Button<BR>
-<input class="mousebutton" type="radio" name="mousebutton" value="mouseleft" checked>left<BR>
-<input class="mousebutton" type="radio" name="mousebutton" value="mouseright">right<BR>
-Click<BR>
-<input class="mouseclick" type="radio" name="mouseclick" value="singleclick" checked>Simple<BR>
-<input class="mouseclick" type="radio" name="mouseclick" value="doubleclick">Double<BR>
-<textarea class="texttosend"></textarea><BR>
-<input class="sendtext" type="button" value="Send"/><BR>
+<span class="formheader">Volume</span>
+<input class="btnmute formelement" type="button" value="&#128266;"><BR>
+<input class="btnvolup formelement" type="button" value="&#x25B2;"><BR>
+<input class="btnvoldown formelement" type="button" value="&#x25BC;"><BR>
+<span class="formheader">Mouse Button</span>
+<input class="mousebutton formelement" type="radio" name="mousebutton" value="mouseleft" checked>left<BR>
+<input class="mousebutton formelement" type="radio" name="mousebutton" value="mouseright">right<BR>
+<span class="formheader">Mouse Click</span>
+<input class="mouseclick formelement" type="radio" name="mouseclick" value="singleclick" checked>Simple<BR>
+<input class="mouseclick formelement" type="radio" name="mouseclick" value="doubleclick">Double<BR>
+<span class="formheader">Send Text</span>
+<textarea class="texttosend formelement"></textarea><BR>
+<input class="sendtext formelement" type="button" value="Send"><BR>
+<input class="drawfps formelement" type="checkbox">Show FPS<BR>
 </div>
 </body>
 </html>';
