@@ -23,3 +23,6 @@ if ($op=="voldown") {
 if ($op=="volup") {
   send("svoup");
 }
+if ($op=="sendtext") {
+  send("txtsd".$_REQUEST["text"]);
+}

@@ -228,7 +228,7 @@ if ($count>9)
 $_SESSION["count"]=$count;
 session_write_close();
 
-if (send("gscre".substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"))."/tmp/screenshot$sid$count.jpeg,".$_REQUEST["w"].",".$_REQUEST["h"].",80")=="1") {
+if (send("gscre".substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"))."/tmp/screenshot$sid$count.jpeg,".$_REQUEST["w"].",".$_REQUEST["h"].",60")=="1") {
   $download = new ResumeDownload(substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"))."/tmp/screenshot$sid$count.jpeg");
   $download->process();
   unset($download);

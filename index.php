@@ -21,12 +21,13 @@ body {
   font-size:14px;
 }
 .message {
-  display:none;
-  position:absolute;
+  display:block;
+  position:relative;
   top:0;
   left:0;
-  width:30%;
-  z-index:30;
+  width:100%;
+  height:60px;
+  z-index:100;
   background-color:white;
 }
 .cvdiv {
@@ -65,7 +66,7 @@ body {
   padding:0;
 }
 .content {
-  position:relative; 
+  position:relative;
 }
 
 </style>
@@ -75,9 +76,9 @@ body {
 <script>
 
 var maxwidth;
-var maxheight; 
+var maxheight;
 var displaywidth;
-var displayheight; 
+var displayheight;
 var timestamp;
 var refreshrate=0;
 
@@ -100,14 +101,15 @@ function drawmouse() {
     var prevx=mousedposx;
     var prevy=mousedposy;
     mousedposx=Math.round(homemousex*displaywidth/homescreenwidth);
-    mousedposy=Math.round(homemousey*displayheight/homescreenheight);       
+    mousedposy=Math.round(homemousey*displayheight/homescreenheight);
     //setmsg("home mouse: "+homemousex+","+homemousey+"<BR>display mouse: "+mousedposx+","+mousedposy+"<BR>"+homescreenwidth+"x"+homescreenheight+"<BR>"+displaywidth+"x"+displayheight+"<BR>"+$(".overlay")[0].width+"x"+$(".overlay")[0].height);
     if (prevx!=mousedposx || prevy!=mousedposy) {
       drawpointer(prevx,prevy);
-    }    
-  }  
+    }
+    drawfps();
+  }
   getmouse();
-  setTimeout(drawmouse,40);
+  setTimeout(drawmouse,50);
 }
 
 function redim() {
@@ -115,12 +117,41 @@ function redim() {
   maxheight= window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
 }
 
+var frames=new Array(20);
+var frameptr=0;
+var gottwenty=false;
+var fps="NA";
+
+function drawfps() {
+  var c = $(".overlay")[0];
+  var ctx = c.getContext("2d");
+  var img = document.getElementById("mousepointer");
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(5,5,310,30);
+  ctx.font = "30px Arial";
+  ctx.fillStyle = "#000000";
+  ctx.fillText(fps,5,30);
+}
+
+function gotframe() {
+  frames[frameptr]=timestamp=new Date().getTime();
+  if (gottwenty) {
+    fps=20000/(frames[frameptr]-frames[(frameptr+1)%19]);
+  }
+  if (frameptr<19) {
+    frameptr++;
+  } else {
+    gottwenty=true;
+    frameptr=0;
+  }
+}
+
 $(document).ready(function() {
   $(".first").show();
-  $(".second").hide();  
+  $(".second").hide();
   timestamp=new Date().getTime();
   redim();
-  $(".first").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);  
+  $(".first").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
   getserverscreensize();
   getmouse();
   setTimeout(drawmouse,50);
@@ -129,13 +160,14 @@ $(document).ready(function() {
     if (newts-timestamp<refreshrate)
       newts=refreshrate-newts+timestamp
     else
-      newts=0;    
+      newts=0;
     setTimeout(function() {
+      gotframe();
       timestamp=new Date().getTime();
       $(".first").show();
       $(".second").hide();
       displaywidth = $(".first")[0].clientWidth;
-      displayheight = $(".first")[0].clientHeight;      
+      displayheight = $(".first")[0].clientHeight;
       $(".overlay").css("width",displaywidth);
       $(".overlay").css("height",displayheight);
       $(".cvdiv").css("width",displaywidth);
@@ -147,9 +179,9 @@ $(document).ready(function() {
       }
       redim();
       $(".second").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
-    },newts);    
+    },newts);
   });
-  
+
   $(".second").on("load",function() {
     var newts = new Date().getTime();
     if (newts-timestamp<refreshrate)
@@ -157,6 +189,7 @@ $(document).ready(function() {
     else
       newts=0;
     setTimeout(function() {
+      gotframe();
       timestamp=new Date().getTime();
       $(".first").hide();
       $(".second").show();
@@ -175,34 +208,134 @@ $(document).ready(function() {
       $(".first").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
     },newts);
   });
-  $(".overlay").click(function(e) {
+  $(".overlay").on("contextmenu", function(e){
+    if (e.which==3) {
+      var offset = $(this).offset();
+      var X = (e.pageX - offset.left);
+      var Y = (e.pageY - offset.top);
+      var hX=Math.round(homescreenwidth * X / displaywidth);
+      var hY=Math.round(homescreenheight * Y / displayheight);
+      sendrclick(hX,hY);
+    }
+    e.preventDefault();
+    return false;
+  });
+  
+var isDragging = false;
+var startx=0;
+var starty=0;
+var mdown=false;
+$(".overlay")
+.mousedown(function(e) {
+  if (e.which==1) {
+    isDragging = false;
+    mdown=true;
     var offset = $(this).offset();
     var X = (e.pageX - offset.left);
     var Y = (e.pageY - offset.top);
     var hX=Math.round(homescreenwidth * X / displaywidth);
     var hY=Math.round(homescreenheight * Y / displayheight);
-    //setmsg(homescreenwidth+"x"+homescreenheight+" --> "+displaywidth+"x"+displayheight+"<BR>canvas: "+$(".overlay")[0].width+"x"+$(".overlay")[0].height+"<BR>click: "+X+","+Y+"<BR>send: "+hX+","+hY);
-    sendclick(hX,hY);
-  });  
-  
-  $( ".mousebutton" ).change(function() {
-    switch($(this).val()) {
-      case "mouseleft":
-        break;
-      case "mouseright":
-        break;
+    startx=hX;
+    starty=hY;     
+  }
+})
+.mousemove(function(e) {
+  if (mdown) {
+    var offset = $(this).offset();
+    var X = (e.pageX - offset.left);
+    var Y = (e.pageY - offset.top);
+    var hX=Math.round(homescreenwidth * X / displaywidth);
+    var hY=Math.round(homescreenheight * Y / displayheight);
+    if (!isDragging) {
+      isDragging = true;
+      sendmousedown(startx,starty);
+      sendmousemove(hX,hY);
+      setmsg("drag start: "+hX+"x"+hY);
+    } else  {
+      sendmousemove(hX,hY);
+      setmsg("dragging: "+hX+"x"+hY);
     }
-  });
-  
-  $( ".mouseclick" ).change(function() {
-    switch($(this).val()) {
-      case "singleclick":
-        break;
-      case "doubleclick":
-        break;
+  }
+ })
+.mouseup(function(e) {
+  if (e.which==1) {
+    mdown=false;
+    var wasDragging = isDragging;
+    isDragging = false;
+    var offset = $(this).offset();
+    var X = (e.pageX - offset.left);
+    var Y = (e.pageY - offset.top);
+    var hX=Math.round(homescreenwidth * X / displaywidth);
+    var hY=Math.round(homescreenheight * Y / displayheight);  
+    if (wasDragging) {
+      sendmouseup(hX,hY);
+      setmsg("end dragging: "+hX+"x"+hY);
+    } else {
+      sendclick(hX,hY);
+      setmsg(homescreenwidth+"x"+homescreenheight+" --> "+displaywidth+"x"+displayheight+"<BR>canvas: "+$(".overlay")[0].width+"x"+$(".overlay")[0].height+"<BR>click: "+X+","+Y+"<BR>send: "+hX+","+hY);
     }
-  });
+  }
+})
+.on("touchstart",function(e) {
+  isDragging = false;
+  var touches = e.changedTouches;
+  var offset = $(this).offset();
+  var X = (touches[touches.length-1].pageX - offset.left);
+  var Y = (touches[touches.length-1].pageY - offset.top);
+  var hX=Math.round(homescreenwidth * X / displaywidth);
+  var hY=Math.round(homescreenheight * Y / displayheight);  
+  startx=hX;
+  starty=hY;     
+})
+.on("touchmove",function(e) {
+  var touches = e.changedTouches;
+  var offset = $(this).offset();
+  var X = (touches[touches.length-1].pageX - offset.left);
+  var Y = (touches[touches.length-1].pageY - offset.top);
+  var hX=Math.round(homescreenwidth * X / displaywidth);
+  var hY=Math.round(homescreenheight * Y / displayheight);  
+  if (!isDragging) {
+    isDragging = true;
+    sendmousedown(startx,starty);
+    sendmousemove(hX,hY);
+    setmsg("drag start: "+hX+"x"+hY);
+  } else  {
+    sendmousemove(hX,hY);
+    setmsg("dragging: "+hX+"x"+hY);
+  }
+})
+.on("touchend",function(e) {
+  var wasDragging = isDragging;
+  isDragging = false;
+  var touches = e.changedTouches;
+  var offset = $(this).offset();
+  var X = (touches[touches.length-1].pageX - offset.left);
+  var Y = (touches[touches.length-1].pageY - offset.top);
+  var hX=Math.round(homescreenwidth * X / displaywidth);
+  var hY=Math.round(homescreenheight * Y / displayheight);  
+  if (wasDragging) {
+    sendmouseup(hX,hY);
+    setmsg("end dragging: "+hX+"x"+hY);
+  }
+});
 
+  var overcanvas=false;
+  $(".overlay").mouseover(function(e) {
+    overcanvas=true;
+  });
+  $(".overlay").mouseout(function(e) {
+    overcanvas=false;
+  });
+  $(document).on("keypress",function(e) {
+    if (overcanvas) {
+      alert(e.which);
+      e.preventDefault();
+      return false;
+    }
+  });
+  $(".sendtext").click(function() {
+    sendtext($(".texttosend").val());
+  });
   $(".btnmute").click(function() {
     sendmute();
   });
@@ -216,9 +349,9 @@ $(document).ready(function() {
 </script>
 </head>
 <body style="padding:0;margin:0">
-<div class="content" style="padding:0;margin:0;text-align:center;">
-  <div class="message"></div>
-  <div class="cvdiv">    
+<div class="message"></div>
+<div class="content" style="padding:0;margin:0;text-align:center;">  
+  <div class="cvdiv">
     <canvas class="overlay"></canvas>
     <img id="mousepointer" src="/windows/cursor.png" style="z-index:0;position:absolute;"/>
     <img class="first" src=""/><img class="second" src=""/>
@@ -234,6 +367,8 @@ Mouse Button<BR>
 Click<BR>
 <input class="mouseclick" type="radio" name="mouseclick" value="singleclick" checked>Simple<BR>
 <input class="mouseclick" type="radio" name="mouseclick" value="doubleclick">Double<BR>
+<textarea class="texttosend"></textarea><BR>
+<input class="sendtext" type="button" value="Send"/><BR>
 </div>
 </body>
 </html>';

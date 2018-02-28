@@ -1,0 +1,9 @@
+C:\web\windows\bin\src\DesktopInteract\bin\x64\Release\ApplicationLauncher.dll.config
+C:\web\windows\bin\src\DesktopInteract\bin\x64\Release\ApplicationLauncher.dll
+C:\web\windows\bin\src\DesktopInteract\bin\x64\Release\ApplicationLauncher.pdb
+C:\web\windows\bin\src\DesktopInteract\bin\x64\Release\ApplicationLauncher.tlb
+C:\web\windows\bin\src\DesktopInteract\bin\x64\Release\Interop.IWshRuntimeLibrary.dll
+C:\web\windows\bin\src\DesktopInteract\obj\x64\Release\Interop.IWshRuntimeLibrary.dll
+C:\web\windows\bin\src\DesktopInteract\obj\x64\Release\ApplicationLauncher.vbproj.ResolveComReference.cache
+C:\web\windows\bin\src\DesktopInteract\obj\x64\Release\ApplicationLauncher.dll
+C:\web\windows\bin\src\DesktopInteract\obj\x64\Release\ApplicationLauncher.pdb

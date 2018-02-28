@@ -23,8 +23,7 @@ function getserverscreensize() {
     });
 }
 
-function sendclick(mx,my) {
-    
+function sendclick(mx,my) {    
   var clicktype=$("input[name='mouseclick']:checked").val();
   var mousebutton=$("input[name='mousebutton']:checked").val();
   var sendaction;
@@ -48,6 +47,40 @@ function sendclick(mx,my) {
     }).done(getmouse);
 }
 
+function sendrclick(mx,my) {    
+  var sendaction="clickr";
+  $.ajax({
+    url: "/windows/receiveinput.php",
+    method: "POST",
+    data: {action:sendaction,x:mx,y:my}
+  }).done(getmouse);
+}
+
+function sendmousedown(mx,my) {    
+  var sendaction="moused";
+  $.ajax({
+    url: "/windows/receiveinput.php",
+    method: "POST",
+    data: {action:sendaction,x:mx,y:my}
+  }).done(getmouse);
+}
+function sendmousemove(mx,my) {
+  var sendaction="mousem";
+  $.ajax({
+    url: "/windows/receiveinput.php",
+    method: "POST",
+    data: {action:sendaction,x:mx,y:my}
+  }).done(getmouse);
+}
+function sendmouseup(mx,my) {
+  var sendaction="mouseu";
+  $.ajax({
+    url: "/windows/receiveinput.php",
+    method: "POST",
+    data: {action:sendaction,x:mx,y:my}
+  }).done(getmouse);
+}
+
 function sendmute() {
   $.ajax({
     url: "/windows/receiveinput.php",
@@ -69,5 +102,13 @@ function sendvolup() {
     url: "/windows/receiveinput.php",
     method: "POST",
     data: {action:"volup"}
+  });
+}
+
+function sendtext(msg) {
+  $.ajax({
+    url: "/windows/receiveinput.php",
+    method: "POST",
+    data: {action:"sendtext",text:msg}
   });
 }

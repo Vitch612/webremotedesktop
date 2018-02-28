@@ -8,6 +8,7 @@ Imports System.Threading
 Imports System.Diagnostics
 Imports System.Net.Sockets
 Imports System.Net
+Imports System.ComponentModel
 
 Module Module1
 
@@ -24,81 +25,169 @@ Module Module1
     End Sub
 
     Private Sub subThread(ByVal _TCPClient As TcpClient)
-        timer = Now
-        Dim stream As NetworkStream = _TCPClient.GetStream()
-        Dim bytes(128) As Byte
-        Dim datastring As String = Nothing
-        Dim i As Int32
-        i = stream.Read(bytes, 0, bytes.Length)
-        While (i <> 0)
-            datastring = System.Text.Encoding.ASCII.GetString(bytes, 0, i)
-            Dim operation As String = datastring.Substring(0, 5)
-            Dim parameters As String() = datastring.Substring(5).Split(",")
-            Dim reply As String
-            Select Case operation
-                Case "gscre"
-                    If Functionality.grab(parameters(0), Convert.ToInt32(parameters(1)), Convert.ToInt32(parameters(2)), CType(Convert.ToInt32(parameters(3)), Long)) Then
-                        reply = "1"
-                    Else
-                        reply = "0"
-                    End If
-                Case "gscrr"
-                    Dim retval As Integer() = Functionality.getscreen_resolution()
-                    reply = retval(0) & "," & retval(1)
-                Case "gmpos"
-                    Dim retval As Integer() = Functionality.getmousepos()
-                    reply = retval(0) & "," & retval(1)
-                Case "smcll"
-                    Functionality.mouseclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                Case "smclr"
-                    Functionality.mouseclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                Case "smdcl"
-                    Functionality.mousedblclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                Case "smdcr"
-                    Functionality.mousedblclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                Case "svmut"
-                    Functionality.mute()
-                Case "svodo"
-                    Functionality.volumedown()
-                Case "svoup"
-                    Functionality.volumeup()
-            End Select
-            If Not reply Is Nothing Then
-                Dim msg As Byte() = System.Text.Encoding.ASCII.GetBytes(reply)
-                stream.Write(msg, 0, msg.Length)
-            End If
-            If (stream.DataAvailable) Then
-                i = stream.Read(bytes, 0, bytes.Length)
-            Else
-                i = 0
-            End If
-        End While
-        _TCPClient.Close()
+        Try
+            timer = Now
+            Dim stream As NetworkStream = _TCPClient.GetStream()
+            Dim bytes(128) As Byte
+            Dim datastring As String = Nothing
+            Dim i As Int32
+            i = stream.Read(bytes, 0, bytes.Length)
+            While (i <> 0)
+                datastring = System.Text.Encoding.ASCII.GetString(bytes, 0, i)
+                Dim operation As String = datastring.Substring(0, 5)
+                Dim parameters As String()
+                If operation.Equals("txtsd") Then
+                    parameters = {datastring.Substring(5)}
+                Else
+                    parameters = datastring.Substring(5).Split(",")
+                End If
+                Dim reply As String
+                Select Case operation
+                    Case "txtsd"
+                        Functionality.sendText(parameters(0))
+                    Case "gscre"
+                        If Functionality.grab(parameters(0), Convert.ToInt32(parameters(1)), Convert.ToInt32(parameters(2)), CType(Convert.ToInt32(parameters(3)), Long)) Then
+                            reply = "1"
+                        Else
+                            reply = "0"
+                        End If
+                    Case "gscrr"
+                        Dim retval As Integer() = Functionality.getscreen_resolution()
+                        reply = retval(0) & "," & retval(1)
+                    Case "gmpos"
+                        Dim retval As Integer() = Functionality.getmousepos()
+                        reply = retval(0) & "," & retval(1)
+                    Case "smcll"
+                        Functionality.mouseclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+                    Case "smclr"
+                        Functionality.mouseclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+                    Case "smdcl"
+                        Functionality.mousedblclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+                    Case "smdcr"
+                        Functionality.mousedblclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+                    Case "svmut"
+                        Functionality.mute()
+                    Case "svodo"
+                        Functionality.volumedown()
+                    Case "svoup"
+                        Functionality.volumeup()
+                End Select
+                If Not reply Is Nothing Then
+                    Dim msg As Byte() = System.Text.Encoding.ASCII.GetBytes(reply)
+                    stream.Write(msg, 0, msg.Length)
+                End If
+                If (stream.DataAvailable) Then
+                    i = stream.Read(bytes, 0, bytes.Length)
+                Else
+                    i = 0
+                End If
+            End While
+            _TCPClient.Close()
+        Catch ex As Exception
+            log(ex.Message)
+        End Try
     End Sub
 
     Private timer As DateTime
     Private Const idletime = 1
+
+
+    'Public tcpClientConnected As New ManualResetEvent(False)
+    'Private Sub connectionHandler(ByVal ar As IAsyncResult)
+    '    Try
+    '        timer = Now
+    '        Dim _TCPListener As TcpListener = CType(ar.AsyncState, TcpListener)
+    '        Dim _TCPClient As TcpClient = _TCPListener.EndAcceptTcpClient(ar)
+    '        Dim stream As NetworkStream = _TCPClient.GetStream()
+    '        Dim bytes(128) As Byte
+    '        Dim datastring As String = Nothing
+    '        Dim i As Int32
+    '        i = stream.Read(bytes, 0, bytes.Length)
+    '        While (i <> 0)
+    '            datastring = System.Text.Encoding.ASCII.GetString(bytes, 0, i)
+    '            Dim operation As String = datastring.Substring(0, 5)
+    '            Dim parameters As String()
+    '            If operation.Equals("txtsd") Then
+    '                parameters = {datastring.Substring(5)}
+    '            Else
+    '                parameters = datastring.Substring(5).Split(",")
+    '            End If
+    '            Dim reply As String
+    '            Select Case operation
+    '                Case "txtsd"
+    '                    Functionality.sendText(parameters(0))
+    '                Case "gscre"
+    '                    If Functionality.grab(parameters(0), Convert.ToInt32(parameters(1)), Convert.ToInt32(parameters(2)), CType(Convert.ToInt32(parameters(3)), Long)) Then
+    '                        reply = "1"
+    '                    Else
+    '                        reply = "0"
+    '                    End If
+    '                Case "gscrr"
+    '                    Dim retval As Integer() = Functionality.getscreen_resolution()
+    '                    reply = retval(0) & "," & retval(1)
+    '                Case "gmpos"
+    '                    Dim retval As Integer() = Functionality.getmousepos()
+    '                    reply = retval(0) & "," & retval(1)
+    '                Case "smcll"
+    '                    Functionality.mouseclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+    '                Case "smclr"
+    '                    Functionality.mouseclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+    '                Case "smdcl"
+    '                    Functionality.mousedblclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+    '                Case "smdcr"
+    '                    Functionality.mousedblclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
+    '                Case "svmut"
+    '                    Functionality.mute()
+    '                Case "svodo"
+    '                    Functionality.volumedown()
+    '                Case "svoup"
+    '                    Functionality.volumeup()
+    '            End Select
+    '            If Not reply Is Nothing Then
+    '                Dim msg As Byte() = System.Text.Encoding.ASCII.GetBytes(reply)
+    '                stream.Write(msg, 0, msg.Length)
+    '            End If
+    '            If (stream.DataAvailable) Then
+    '                i = stream.Read(bytes, 0, bytes.Length)
+    '            Else
+    '                i = 0
+    '            End If
+    '        End While
+    '        _TCPClient.Close()
+    '    Catch ex As Exception
+    '        log(ex.Message)
+    '    End Try
+    'End Sub
+
 
     Private Sub ThreadTask()
         Try
             timer = Now
             Dim _TCPListener As TcpListener
             Dim localPort As Int32 = 8888
-            Dim localAddr As IPAddress = IPAddress.Parse("127.0.0.1")
+            Dim localAddr As IPAddress = IPAddress.Parse("192.168.137.1")
             _TCPListener = New TcpListener(localAddr, localPort)
-            _TCPListener.Start()
+            _TCPListener.Server.ReceiveTimeout = 10
+            _TCPListener.Server.SendTimeout = 10
+            _TCPListener.Server.LingerState = New System.Net.Sockets.LingerOption(False, 0)
+            _TCPListener.Start(512)
+
+            '_TCPListener.BeginAcceptTcpClient(New AsyncCallback(AddressOf connectionHandler), _TCPListener)
+
+
+
             Dim keepgoing As Boolean = True
-            Dim func As Functionality = New Functionality()
             Do While keepgoing
-                Dim _trd As Thread = New Thread(AddressOf subThread)
                 If _TCPListener.Pending() Then
+                    Dim _trd As Thread = New Thread(AddressOf subThread)
+                    _trd.IsBackground = True
                     _trd.Start(_TCPListener.AcceptTcpClient())
                 End If
                 Dim currentDate As DateTime = Now
                 If currentDate.Subtract(timer).TotalSeconds > idletime Then
                     keepgoing = False
                 End If
-                Thread.Sleep(1)
+                Thread.Sleep(2)
             Loop
             _TCPListener.Stop()
         Catch ex As Exception
@@ -106,16 +195,11 @@ Module Module1
         End Try
     End Sub
 
-    Private trd As Thread
-
     Sub Main()
-        Try
-            trd = New Thread(AddressOf ThreadTask)
-            trd.IsBackground = False
-            trd.Start()
-        Catch ex As Exception
-            log(ex.Message)
-        End Try
+        Dim trd As Thread
+        trd = New Thread(AddressOf ThreadTask)
+        trd.IsBackground = False
+        trd.Start()
     End Sub
 
     Private Class Functionality
@@ -145,6 +229,10 @@ Module Module1
             Catch ex As Exception
                 log(ex.Message)
             End Try
+        End Sub
+
+        Public Shared Sub sendText(ByVal text As String)
+            ScreenCapture.User32.SendString(text)
         End Sub
 
         Public Shared Function getscreen_resolution() As Integer()
@@ -304,6 +392,73 @@ Module Module1
                 Public right As Integer
                 Public bottom As Integer
             End Structure
+
+            <StructLayout(LayoutKind.Explicit, pack:=1, Size:=28)> _
+            Friend Structure INPUT
+                <FieldOffset(0)> Public dwType As InputType
+                <FieldOffset(4)> Public mi As MOUSEINPUT
+                <FieldOffset(4)> Public ki As KEYBDINPUT
+                <FieldOffset(4)> Public hi As HARDWAREINPUT
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential, pack:=1)> _
+            Friend Structure MOUSEINPUT
+                Public dx As Int32
+                Public dy As Int32
+                Public mouseData As UInt32
+                Public dwFlags As MOUSEEVENTF
+                Public time As UInt32
+                Public dwExtraInfo As IntPtr
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential, pack:=1)> _
+            Friend Structure KEYBDINPUT
+                Public wVk As UShort
+                Public wScan As UShort
+                Public dwFlags As KEYEVENTF
+                Public time As UInteger
+                Public dwExtraInfo As IntPtr
+            End Structure
+
+            <StructLayout(LayoutKind.Sequential, pack:=1)> _
+            Friend Structure HARDWAREINPUT
+                Public uMsg As UInt32
+                Public wParamL As UInt16
+                Public wParamH As UInt16
+            End Structure
+
+            Friend Enum InputType As UInt32
+                Mouse = 0
+                Keyboard = 1
+                Hardware = 2
+            End Enum
+
+            <Flags()> _
+            Friend Enum MOUSEEVENTF As UInt32
+                MOVE = &H1
+                LEFTDOWN = &H2
+                LEFTUP = &H4
+                RIGHTDOWN = &H8
+                RIGHTUP = &H10
+                MIDDLEDOWN = &H20
+                MIDDLEUP = &H40
+                XDOWN = &H80
+                XUP = &H100
+                VIRTUALDESK = &H400
+                WHEEL = &H800
+                ABSOLUTE = &H8000
+            End Enum
+
+            <Flags()> _
+            Public Enum KEYEVENTF As UInt32
+                EXTENDEDKEY = 1
+                KEYUP = 2
+                [UNICODE] = 4
+                SCANCODE = 8
+            End Enum
+            Const KEYEVENTF_UNICODE As UInt32 = &H4
+            Const KEYEVENTF_KEYUP As UInt32 = &H2
+
             Public Declare Function GetDesktopWindow Lib "user32.dll" () As IntPtr
             Public Declare Function GetWindowDC Lib "user32.dll" (ByVal hWnd As IntPtr) As IntPtr
             Public Declare Function ReleaseDC Lib "user32.dll" (ByVal hWnd As IntPtr, ByVal hDC As IntPtr) As IntPtr
@@ -311,7 +466,32 @@ Module Module1
             Public Declare Sub mouse_event Lib "user32.dll" (ByVal dwFlags As UInt32, ByVal dx As UInt32, ByVal dy As UInt32, ByVal dwData As UInt32, ByVal dwExtraInfo As IntPtr)
             Public Declare Auto Function GetCursorPos Lib "User32.dll" (ByRef lpPoint As Point) As Long
             Public Declare Sub keybd_event Lib "user32.dll" (ByVal bVk As Byte, ByVal bScan As Byte, ByVal dwFlags As UInteger, ByVal dwExtraInfo As Integer)
-            ' sendInput SendMessage PostMessage
+            Public Declare Function GetMessageExtraInfo Lib "user32.dll" () As IntPtr
+            <DllImport("user32.dll", SetLastError:=True)> Public Shared Function SendInput(ByVal cInputs As UInteger, ByRef pInputs As INPUT(), ByVal cbSize As Int32) As UInteger
+            End Function
+
+            Public Shared Sub SendString(ByVal s As String)
+                Dim inputs As New List(Of INPUT)
+                For Each c As Char In s
+                    For Each keyUp As Boolean In New Boolean() {False, True}
+                        Dim keybinp As KEYBDINPUT
+                        keybinp.wVk = 0
+                        keybinp.wScan = Microsoft.VisualBasic.AscW(c)
+                        keybinp.dwFlags = KEYEVENTF_UNICODE Or If(keyUp, KEYEVENTF_KEYUP, 0)
+                        keybinp.time = 0
+                        keybinp.dwExtraInfo = IntPtr.Zero
+                        Dim inputonec As INPUT
+                        inputonec.dwType = InputType.Keyboard
+                        inputonec.ki = keybinp
+                        inputs.Add(inputonec)
+                    Next
+                Next
+                log(Marshal.SizeOf(GetType(INPUT)))
+                If SendInput(Convert.ToUInt32(inputs.Count), inputs.ToArray(), Marshal.SizeOf(GetType(INPUT))) <> inputs.Count Then
+                    Dim ex As Win32Exception = New Win32Exception(Marshal.GetLastWin32Error())
+                    Throw New ApplicationException("Input Failed " & ex.Message, ex)
+                End If
+            End Sub
 
             Public Shared Sub SendClick()
                 SendDown()
