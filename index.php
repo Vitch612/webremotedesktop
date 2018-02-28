@@ -360,8 +360,7 @@ $(".overlay")
     }
   });
   $(".sendtext").click(function() {
-    alert($(".drawfps").is("checked"));
-    //sendtext($(".texttosend").val());
+    sendtext($(".texttosend").val());
   });
   $(".btnmute").click(function() {
     sendmute();
