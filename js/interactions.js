@@ -1,9 +1,11 @@
 var homemousex;
 var homemousey;
 function getmouse() {
+  var sendaction="getmouse";
   $.ajax({
-    url: "/windows/getmouse.php",
-    method: "GET",
+    url: "/windows/receiveinput.php",
+    method: "POST",
+    data: {action:sendaction}
     }).done(function(data) {
         var pos=data.split(",");
         homemousex=pos[0];
@@ -13,9 +15,11 @@ function getmouse() {
 var homescreenwidth;
 var homescreenheight;
 function getserverscreensize() {
+  var sendaction="getscreensize";
   $.ajax({
-    url: "/windows/getscreenresolution.php",
-    method: "GET",
+    url: "/windows/receiveinput.php",
+    method: "POST",
+    data: {action:sendaction}
     }).done(function(data) {
         var pos=data.split(",");
         homescreenwidth=Number(pos[0]);

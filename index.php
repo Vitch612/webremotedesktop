@@ -52,19 +52,20 @@ body {
   margin:0;
   padding:0;
   width:100%;
-  //border-color:black;
-  //border-style:solid;
-  //border-width:1px;
 }
 .first {
-  position:relative;
-  z-index:14;
+  position:absolute;
+  top:0;
+  left:0;
+  z-index:13;
   margin:0;
   padding:0;
 }
 .second {
-  position:relative;
-  z-index:14;
+  position:absolute;
+  top:0;
+  left:0;
+  z-index:12;
   margin:0;
   padding:0;
 }
@@ -98,7 +99,12 @@ var maxheight;
 var displaywidth;
 var displayheight;
 var timestamp;
-var refreshrate=50;
+var refreshrate=0;
+var firefox;
+var frames=new Array(20);
+var frameptr=0;
+var gottwenty=false;
+var fps="NA";
 
 function setmsg(text) {
   $(".message").html(text);
@@ -126,21 +132,16 @@ function drawmouse() {
     }
     if ($(".drawfps").prop("checked")) {
       drawfps();
-    }    
+    } 
   }
   getmouse();
-  setTimeout(drawmouse,50);
+  setTimeout(drawmouse,150);
 }
 
 function redim() {
   maxwidth= window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
   maxheight= window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
 }
-
-var frames=new Array(20);
-var frameptr=0;
-var gottwenty=false;
-var fps="NA";
 
 function drawfps() {
   var c = $(".overlay")[0];
@@ -165,43 +166,27 @@ function gotframe() {
   }
 }
 
+var isDragging = false;
+var canceldrag = true;
+var dragstep = 20;
+var startx=0;
+var starty=0;
+var lastx=0;
+var lasty=0;
+var mdown=false;
+function calcdistance(x0,y0,x1,y1) {
+  return Math.sqrt(Math.pow(Math.abs(x0-x1),2)+Math.pow(Math.abs(y0-y1),2));
+}
+
 $(document).ready(function() {
-  $(".first").show();
-  $(".second").hide();
   timestamp=new Date().getTime();
   redim();
   $(".first").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
   getserverscreensize();
   getmouse();
   setTimeout(drawmouse,50);
-  $(".first").on("load",function() {
-    var newts = new Date().getTime();
-    if (newts-timestamp<refreshrate)
-      newts=refreshrate-newts+timestamp
-    else
-      newts=0;
-    setTimeout(function() {
-      if ($(".drawfps").is("checked")) gotframe();
-      timestamp=new Date().getTime();
-      $(".first").show();
-      $(".second").hide();
-      displaywidth = $(".first")[0].clientWidth;
-      displayheight = $(".first")[0].clientHeight;
-      $(".overlay").css("width",displaywidth);
-      $(".overlay").css("height",displayheight);
-      $(".cvdiv").css("width",displaywidth);
-      $(".cvdiv").css("height",displayheight);
-      if ($(".overlay")[0].width != displaywidth || $(".overlay")[0].height!=displayheight) {
-        $(".overlay")[0].width=displaywidth;
-        $(".overlay")[0].height=displayheight;
-        drawpointer(mousedposx,mousedposy);
-      }
-      redim();
-      $(".second").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
-    },newts);
-  });
-
-/*
+  
+  /*
   var portrait=(window.innerWidth > window.innerHeight? false:true);
   window.onresize = function() {
     var currentorientation=(window.innerWidth > window.innerHeight? false:true);
@@ -221,7 +206,33 @@ $(document).ready(function() {
       portrait=currentorientation;    
     }    
   }
-*/
+  */
+  $(".first").on("load",function() {
+    var newts = new Date().getTime();
+    if (newts-timestamp<refreshrate)
+      newts=refreshrate-newts+timestamp
+    else
+      newts=0;
+    setTimeout(function() {
+      if ($(".drawfps").is("checked")) gotframe();
+      timestamp=new Date().getTime();
+      $(".first").css("z-index","13");
+      $(".second").css("z-index","12");
+      displaywidth = $(".first")[0].clientWidth;
+      displayheight = $(".first")[0].clientHeight;
+      $(".overlay").css("width",displaywidth);
+      $(".overlay").css("height",displayheight);
+      $(".cvdiv").css("width",displaywidth);
+      $(".cvdiv").css("height",displayheight);
+      if ($(".overlay")[0].width != displaywidth || $(".overlay")[0].height!=displayheight) {
+        $(".overlay")[0].width=displaywidth;
+        $(".overlay")[0].height=displayheight;
+        drawpointer(mousedposx,mousedposy);
+      }
+      redim();
+      $(".second").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
+    },newts);
+  });
   $(".second").on("load",function() {
     var newts = new Date().getTime();
     if (newts-timestamp<refreshrate)
@@ -231,8 +242,8 @@ $(document).ready(function() {
     setTimeout(function() {
       if ($(".drawfps").prop("checked")) gotframe();
       timestamp=new Date().getTime();
-      $(".first").hide();
-      $(".second").show();
+      $(".first").css("z-index","12");
+      $(".second").css("z-index","13");
       displaywidth = $(".second")[0].clientWidth;
       displayheight = $(".second")[0].clientHeight;
       $(".overlay").css("width",displaywidth);
@@ -259,120 +270,107 @@ $(document).ready(function() {
     }
     e.preventDefault();
     return false;
-  });
-  
-var isDragging = false;
-var canceldrag = true;
-var dragstep = 20;
-var startx=0;
-var starty=0;
-var lastx=0;
-var lasty=0;
-var mdown=false;
-function calcdistance(x0,y0,x1,y1) {
-  return Math.sqrt(Math.pow(Math.abs(x0-x1),2)+Math.pow(Math.abs(y0-y1),2));
-}
-$(".overlay")
-.mousedown(function(e) {
-  if (e.which==1) {
+  });  
+  $(".overlay")
+  .mousedown(function(e) {
+    if (e.which==1) {
+      isDragging = false;
+      canceldrag = true;
+      mdown=true;
+      var offset = $(this).offset();
+      var X = (e.pageX - offset.left);
+      var Y = (e.pageY - offset.top);
+      var hX=Math.round(homescreenwidth * X / displaywidth);
+      var hY=Math.round(homescreenheight * Y / displayheight);
+      startx=hX;
+      starty=hY;
+      lastx=hX;
+      lasty=hY;
+      sendmousemove(hX,hY);
+    }
+  })
+  .mousemove(function(e) {
+    if (mdown) {
+      var offset = $(this).offset();
+      var X = (e.pageX - offset.left);
+      var Y = (e.pageY - offset.top);
+      var hX=Math.round(homescreenwidth * X / displaywidth);
+      var hY=Math.round(homescreenheight * Y / displayheight);
+      if (!isDragging) {
+        isDragging = true;
+        sendmousemove(hX,hY);
+        sendmousedown(startx,starty);
+      }
+      if (calcdistance(hX,hY,lastx,lasty)>dragstep) {
+        lastx=hX;
+        lasty=hY;
+        canceldrag=false;
+        sendmousemove(hX,hY);
+      }    
+    }
+  })
+  .mouseup(function(e) {
+    if (e.which==1) {
+      mdown=false;
+      var wasDragging = isDragging;
+      isDragging = false;
+      var offset = $(this).offset();
+      var X = (e.pageX - offset.left);
+      var Y = (e.pageY - offset.top);
+      var hX=Math.round(homescreenwidth * X / displaywidth);
+      var hY=Math.round(homescreenheight * Y / displayheight);  
+      if (wasDragging && !canceldrag) {
+        sendmousemove(hX,hY);
+        sendmouseup(hX,hY);
+      } else {
+        sendclick(hX,hY);
+      }
+      canceldrag=true;
+    }
+  })
+  .on("touchstart",function(e) {
     isDragging = false;
-    canceldrag = true;
-    mdown=true;
+    var touches = e.changedTouches;
     var offset = $(this).offset();
-    var X = (e.pageX - offset.left);
-    var Y = (e.pageY - offset.top);
+    var X = (touches[touches.length-1].pageX - offset.left);
+    var Y = (touches[touches.length-1].pageY - offset.top);
     var hX=Math.round(homescreenwidth * X / displaywidth);
-    var hY=Math.round(homescreenheight * Y / displayheight);
+    var hY=Math.round(homescreenheight * Y / displayheight);  
     startx=hX;
-    starty=hY;
-    lastx=hX;
-    lasty=hY;
-    sendmousemove(hX,hY);
-  }
-})
-.mousemove(function(e) {
-  if (mdown) {
+    starty=hY;     
+  })
+  .on("touchmove",function(e) {
+    var touches = e.changedTouches;
     var offset = $(this).offset();
-    var X = (e.pageX - offset.left);
-    var Y = (e.pageY - offset.top);
+    var X = (touches[touches.length-1].pageX - offset.left);
+    var Y = (touches[touches.length-1].pageY - offset.top);
     var hX=Math.round(homescreenwidth * X / displaywidth);
-    var hY=Math.round(homescreenheight * Y / displayheight);
+    var hY=Math.round(homescreenheight * Y / displayheight);  
     if (!isDragging) {
       isDragging = true;
       sendmousemove(hX,hY);
-      sendmousedown(startx,starty);
+      sendmousedown(startx,starty);    
     }
     if (calcdistance(hX,hY,lastx,lasty)>dragstep) {
       lastx=hX;
       lasty=hY;
-      canceldrag=false;
       sendmousemove(hX,hY);
-    }    
-  }
- })
-.mouseup(function(e) {
-  if (e.which==1) {
-    mdown=false;
+    } 
+  })
+  .on("touchend",function(e) {
     var wasDragging = isDragging;
     isDragging = false;
+    var touches = e.changedTouches;
     var offset = $(this).offset();
-    var X = (e.pageX - offset.left);
-    var Y = (e.pageY - offset.top);
+    var X = (touches[touches.length-1].pageX - offset.left);
+    var Y = (touches[touches.length-1].pageY - offset.top);
     var hX=Math.round(homescreenwidth * X / displaywidth);
     var hY=Math.round(homescreenheight * Y / displayheight);  
-    if (wasDragging && !canceldrag) {
+    if (wasDragging) {
       sendmousemove(hX,hY);
       sendmouseup(hX,hY);
-    } else {
-      sendclick(hX,hY);
     }
-    canceldrag=true;
-  }
-})
-.on("touchstart",function(e) {
-  isDragging = false;
-  var touches = e.changedTouches;
-  var offset = $(this).offset();
-  var X = (touches[touches.length-1].pageX - offset.left);
-  var Y = (touches[touches.length-1].pageY - offset.top);
-  var hX=Math.round(homescreenwidth * X / displaywidth);
-  var hY=Math.round(homescreenheight * Y / displayheight);  
-  startx=hX;
-  starty=hY;     
-})
-.on("touchmove",function(e) {
-  var touches = e.changedTouches;
-  var offset = $(this).offset();
-  var X = (touches[touches.length-1].pageX - offset.left);
-  var Y = (touches[touches.length-1].pageY - offset.top);
-  var hX=Math.round(homescreenwidth * X / displaywidth);
-  var hY=Math.round(homescreenheight * Y / displayheight);  
-  if (!isDragging) {
-    isDragging = true;
-    sendmousemove(hX,hY);
-    sendmousedown(startx,starty);    
-  }
-  if (calcdistance(hX,hY,lastx,lasty)>dragstep) {
-    lastx=hX;
-    lasty=hY;
-    sendmousemove(hX,hY);
-  } 
-})
-.on("touchend",function(e) {
-  var wasDragging = isDragging;
-  isDragging = false;
-  var touches = e.changedTouches;
-  var offset = $(this).offset();
-  var X = (touches[touches.length-1].pageX - offset.left);
-  var Y = (touches[touches.length-1].pageY - offset.top);
-  var hX=Math.round(homescreenwidth * X / displaywidth);
-  var hY=Math.round(homescreenheight * Y / displayheight);  
-  if (wasDragging) {
-    sendmousemove(hX,hY);
-    sendmouseup(hX,hY);
-  }
-});
-
+  });
   var overcanvas=false;
   $(".overlay").mouseover(function(e) {
     overcanvas=true;

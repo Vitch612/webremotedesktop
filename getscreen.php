@@ -216,6 +216,14 @@ function resize_image($file, $w, $h) {
   imagecopyresampled($dst, $src, 0, 0, 0, 0, $newwidth, $newheight, $width, $height);
   imagejpeg($dst,$file,50);
 }
+
+
+function logrequest($info) {
+  $myfile = fopen("screengrablog.txt", "a");
+  fwrite($myfile, $info);
+  fclose($myfile);
+}
+
 $count=0;
 session_start();
 $sid=substr(session_id(),21);
@@ -228,11 +236,19 @@ if ($count>9)
 $_SESSION["count"]=$count;
 session_write_close();
 
+$start=microtime();
 if (send("gscre".substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"))."/tmp/screenshot$sid$count.jpeg,".$_REQUEST["w"].",".$_REQUEST["h"].",60")=="1") {
+  $gotshot=microtime();
   $download = new ResumeDownload(substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"))."/tmp/screenshot$sid$count.jpeg");
   $download->process();
+  $uploaded=microtime();
   unset($download);
   unlink(substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"))."/tmp/screenshot$sid$count.jpeg");
+  $cleaned=microtime();
+  logrequest("grab screen: ".
+  ($gotshot-$start)." upload image: ".
+  ($uploaded-$gotshot)." clean files: ".
+  ($cleaned-$uploaded)."\n");
 } else {
   $download = new ResumeDownload("C:/web/windows/error.png");
   $download->process();  
