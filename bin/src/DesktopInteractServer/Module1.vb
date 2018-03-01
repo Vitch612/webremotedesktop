@@ -46,6 +46,8 @@ Module Module1
                 Select Case operation
                     Case "txtsd"
                         Functionality.sendText(parameters(0))
+                    Case "backs"
+                        Functionality.sendKey(8)
                     Case "mousd"
                         Functionality.mousemove(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
                         Functionality.mousedown()
@@ -164,6 +166,10 @@ Module Module1
 
         Public Shared Sub sendText(ByVal text As String)
             ScreenCapture.User32.sendkeys(text)
+        End Sub
+
+        Public Shared Sub sendKey(ByVal vk As Byte)
+            ScreenCapture.User32.sendkey(vk)
         End Sub
 
         Public Shared Function getscreen_resolution() As Integer()
@@ -460,6 +466,17 @@ Module Module1
             End Function
             Public Declare Function MapVirtualKeyW Lib "user32.dll" (ByVal uCode As UInteger, ByVal uMapType As UInteger) As UInteger
             Public Declare Function MapVirtualKeyExW Lib "user32.dll" (ByVal uCode As UInteger, ByVal uMapType As UInteger, ByVal dwhkl As IntPtr) As UInteger
+
+            Public Shared Sub sendkey(ByVal vk As Byte)
+                Dim _fwid As IntPtr = GetForegroundWindow()
+                Dim _dwtid As Integer = GetWindowThreadProcessId(_fwid, Nothing)
+                Dim _hkl As IntPtr = GetKeyboardLayout(_dwtid)
+                Dim bScan As Byte = MapVirtualKeyExW(vk, 4, _hkl)
+                If (bScan) <> 0 Then
+                    keybd_event(vk, bScan, 0, IntPtr.Zero)
+                    keybd_event(vk, bScan, KEYEVENTF_KEYUP, IntPtr.Zero)
+                End If
+            End Sub
 
             Public Shared Sub sendkeys(ByVal s As String)
                 Dim _fwid As IntPtr = GetForegroundWindow()

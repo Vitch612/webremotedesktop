@@ -114,3 +114,11 @@ function sendtext(msg) {
     data: {action:"sendtext",text:msg}
   });
 }
+
+function sendbackspace() {
+  $.ajax({
+    url: "/windows/receiveinput.php",
+    method: "POST",
+    data: {action:"sendbackspace"}
+  });
+}

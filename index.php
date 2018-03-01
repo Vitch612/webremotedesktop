@@ -15,10 +15,8 @@ body {
 }
 .controls {
   position:absolute;
-  left:0;
-  top:0;
   padding-left:5px;
-  width:150px;
+  width:100px;
   color:lightgrey;
   background-color:#202020;
   font-size:14px;
@@ -42,6 +40,7 @@ body {
   transform: translate(-50%, 0);
   padding:0;
   margin:0;
+  z-index:13;
 }
 .overlay {
   position:absolute;
@@ -59,18 +58,19 @@ body {
 }
 .first {
   position:relative;
-  z-index:5;
+  z-index:14;
   margin:0;
   padding:0;
 }
 .second {
   position:relative;
-  z-index:5;
+  z-index:14;
   margin:0;
   padding:0;
 }
 .content {
   position:relative;
+  z-index:12;
 }
 .formheader {
   display:block;
@@ -84,7 +84,7 @@ body {
   margin-top:10px;
 }
 .texttosend {
-  width:140px;
+  width:90px;
 }
 
 </style>
@@ -98,7 +98,7 @@ var maxheight;
 var displaywidth;
 var displayheight;
 var timestamp;
-var refreshrate=0;
+var refreshrate=50;
 
 function setmsg(text) {
   $(".message").html(text);
@@ -201,6 +201,27 @@ $(document).ready(function() {
     },newts);
   });
 
+/*
+  var portrait=(window.innerWidth > window.innerHeight? false:true);
+  window.onresize = function() {
+    var currentorientation=(window.innerWidth > window.innerHeight? false:true);
+    if (currentorientation!=portrait) {
+      var body=$(".controls").parent()[0];
+      var controls=$(".controls")[0];
+      var content=$(".content")[0];
+      body.removeChild(controls);
+      body.removeChild(content);
+      if (currentorientation) {
+        body.appendChild(content);
+        body.appendChild(controls);
+      } else {
+        body.appendChild(controls);
+        body.appendChild(content);      
+      }
+      portrait=currentorientation;    
+    }    
+  }
+*/
   $(".second").on("load",function() {
     var newts = new Date().getTime();
     if (newts-timestamp<refreshrate)
@@ -359,7 +380,7 @@ $(".overlay")
   $(".overlay").mouseout(function(e) {
     overcanvas=false;
   });
-  $(document).on("keypress",function(e) {
+  $(document).on("keypress",function(e) {    
     if (overcanvas) {
       sendtext(String.fromCharCode(e.which));      
       e.preventDefault();
@@ -368,6 +389,9 @@ $(".overlay")
   });
   $(".sendtext").click(function() {
     sendtext($(".texttosend").val());
+  });
+  $(".sendback").click(function() {
+    sendbackspace();
   });
   $(".btnmute").click(function() {
     sendmute();
@@ -385,18 +409,14 @@ $(".overlay")
       ctx.clearRect(5,5,310,30);
     }
   });
+  $(".hidecontrols").click(function() {
+    $(".controls").hide();
+  });
 });
 </script>
 </head>
-<body style="padding:0;margin:0">
+<body style="padding:0;margin:0;z-index:50;">
 <div class="message"></div>
-<div class="content" style="padding:0;margin:0;text-align:center;">  
-  <div class="cvdiv">
-    <canvas class="overlay"></canvas>
-    <img id="mousepointer" src="/windows/cursor.png" style="z-index:0;position:absolute;">
-    <img class="first" src=""/><img class="second" src="">
-  </div>
-</div>
 <div class="controls">
   <span class="formheader">Volume</span>
   <input class="btnmute formelement" type="button" value="&#128266;"><BR>
@@ -412,6 +432,14 @@ $(".overlay")
   <textarea class="texttosend formelement"></textarea><BR>
   <input class="sendtext formelement" type="button" value="Send">&nbsp;&nbsp;<input class="sendback formelement" type="button" value="Backspace"><BR>
   <input class="drawfps formelement" type="checkbox">Show FPS<BR>
+  <input class="hidecontrols formelement" type="button" value="Hide">
+</div>
+<div class="content" style="padding:0;margin:0;text-align:center;">  
+  <div class="cvdiv">
+    <canvas class="overlay"></canvas>
+    <img id="mousepointer" src="/windows/cursor.png" style="z-index:0;position:absolute;">
+    <img class="first" src=""/><img class="second" src="">
+  </div>
 </div>
 </body>
 </html>';

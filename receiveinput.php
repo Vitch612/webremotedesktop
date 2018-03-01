@@ -44,3 +44,6 @@ if ($op=="mousem") {
   //logrequest("mouse move: ".$_REQUEST["x"].",".$_REQUEST["y"]."\n");
   send("mousm".$_REQUEST["x"].",".$_REQUEST["y"]);  
 }
+if ($op=="sendbackspace") {
+  send("backs");
+}
