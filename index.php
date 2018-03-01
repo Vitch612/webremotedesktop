@@ -14,11 +14,15 @@ body {
   background-color:black;
 }
 .controls {
-  width:100%;
-  /*color:#00FF00;*/
+  position:absolute;
+  left:0;
+  top:0;
+  padding-left:5px;
+  width:150px;
   color:lightgrey;
-  /*font-weight:bold;*/
+  background-color:#202020;
   font-size:14px;
+  z-index:20;
 }
 .message {
   display:none;
@@ -27,11 +31,11 @@ body {
   left:0;
   width:100%;
   height:60px;
-  z-index:100;
-  background-color:white;
+  z-index:20;
+  background-color:red;
 }
 .cvdiv {
-  position: absolute;
+  position: relative;
   left: 50%;
   top: 0;
   -webkit-transform: translate(-50%, 0);
@@ -78,6 +82,9 @@ body {
 }
 .drawfps {
   margin-top:10px;
+}
+.texttosend {
+  width:140px;
 }
 
 </style>
@@ -391,20 +398,20 @@ $(".overlay")
   </div>
 </div>
 <div class="controls">
-<span class="formheader">Volume</span>
-<input class="btnmute formelement" type="button" value="&#128266;"><BR>
-<input class="btnvolup formelement" type="button" value="&#x25B2;"><BR>
-<input class="btnvoldown formelement" type="button" value="&#x25BC;"><BR>
-<span class="formheader">Mouse Button</span>
-<input class="mousebutton formelement" type="radio" name="mousebutton" value="mouseleft" checked>left<BR>
-<input class="mousebutton formelement" type="radio" name="mousebutton" value="mouseright">right<BR>
-<span class="formheader">Mouse Click</span>
-<input class="mouseclick formelement" type="radio" name="mouseclick" value="singleclick" checked>Simple<BR>
-<input class="mouseclick formelement" type="radio" name="mouseclick" value="doubleclick">Double<BR>
-<span class="formheader">Send Text</span>
-<textarea class="texttosend formelement"></textarea><BR>
-<input class="sendtext formelement" type="button" value="Send"><BR>
-<input class="drawfps formelement" type="checkbox">Show FPS<BR>
+  <span class="formheader">Volume</span>
+  <input class="btnmute formelement" type="button" value="&#128266;"><BR>
+  <input class="btnvolup formelement" type="button" value="&#x25B2;"><BR>
+  <input class="btnvoldown formelement" type="button" value="&#x25BC;"><BR>
+  <span class="formheader">Mouse Button</span>
+  <input class="mousebutton formelement" type="radio" name="mousebutton" value="mouseleft" checked>left<BR>
+  <input class="mousebutton formelement" type="radio" name="mousebutton" value="mouseright">right<BR>
+  <span class="formheader">Mouse Click</span>
+  <input class="mouseclick formelement" type="radio" name="mouseclick" value="singleclick" checked>Simple<BR>
+  <input class="mouseclick formelement" type="radio" name="mouseclick" value="doubleclick">Double<BR>
+  <span class="formheader">Send Text</span>
+  <textarea class="texttosend formelement"></textarea><BR>
+  <input class="sendtext formelement" type="button" value="Send">&nbsp;&nbsp;<input class="sendback formelement" type="button" value="Backspace"><BR>
+  <input class="drawfps formelement" type="checkbox">Show FPS<BR>
 </div>
 </body>
 </html>';
