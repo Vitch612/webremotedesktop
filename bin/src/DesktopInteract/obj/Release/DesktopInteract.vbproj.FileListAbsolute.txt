@@ -1,9 +1,0 @@
-C:\web\windows\bin\src\DesktopInteract\bin\Release\DesktopInteract.dll.config
-C:\web\windows\bin\src\DesktopInteract\bin\Release\DesktopInteract.dll
-C:\web\windows\bin\src\DesktopInteract\bin\Release\DesktopInteract.pdb
-C:\web\windows\bin\src\DesktopInteract\bin\Release\Interop.IWshRuntimeLibrary.dll
-C:\web\windows\bin\src\DesktopInteract\obj\Release\Interop.IWshRuntimeLibrary.dll
-C:\web\windows\bin\src\DesktopInteract\obj\Release\DesktopInteract.vbproj.ResolveComReference.cache
-C:\web\windows\bin\src\DesktopInteract\obj\Release\DesktopInteract.dll
-C:\web\windows\bin\src\DesktopInteract\obj\Release\DesktopInteract.pdb
-C:\web\windows\bin\src\DesktopInteract\bin\Release\DesktopInteract.tlb
