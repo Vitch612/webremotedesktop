@@ -1,14 +1,6 @@
 <?php
 include "serverinteract.php";
-
-function logrequest($info) {
-  $myfile = fopen("requestslog.txt", "a");
-  fwrite($myfile, $info);
-  fclose($myfile);
-}
-
 $op=$_REQUEST["action"];
-$start=microtime();
 if ($op=="getscreensize") {
   echo send("gscrr");
 }
@@ -54,4 +46,3 @@ if ($op=="mousem") {
 if ($op=="sendbackspace") {
   send("backs");
 }
-logrequest("$op took ".(microtime()-$start));

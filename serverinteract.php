@@ -1,27 +1,25 @@
 <?php
 function send($string) {
-  $client = stream_socket_client("tcp://192.168.137.1:8888", $errno, $errorMessage);
-  if ($client == false) {
+  $fp = pfsockopen("tcp://127.0.0.1",8888,$errno,$errorMessage);
+  if (!$fp) {
     if ($errno==10061) {
       $com = new COM("ApplicationLauncher.Launcher");
       $pid=$com->runprocess(str_replace("/","\\",substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/")))."\bin\src\DesktopInteractServer\bin\Release\DesktopInteractServer.exe",true);
       if ($pid!=-1) {
-        $client = stream_socket_client("tcp://192.168.137.1:8888", $errno, $errorMessage);
-        if ($client == false) {
+        $fp = pfsockopen("tcp://127.0.0.1",8888,$errno,$errorMessage);        
+        if (!$fp)
           die();
-        }        
-      } else {
+      } else
         die();
-      }
-    } else {
-      die();
-    }      
+    } else
+      die(); 
+  } 
+  fputs($fp,$string);
+  $retval = "";
+  while (!feof($fp)) {
+    $retval .= fgets($fp, 1024);
   }
-  fwrite($client, $string);
-  $revval=stream_get_contents($client);
-  fclose($client);
-  return $revval;
+  fflush($fp);
+  fclose($fp);
+  return $retval;
 }
-
-
-

@@ -10,9 +10,10 @@ Imports System.Net.Sockets
 Imports System.Net
 Imports System.ComponentModel
 Imports System.Text
+Imports System.Web
+
 
 Module Module1
-
     Private Sub log(ByVal msg As String, Optional ByVal type As EventLogEntryType = EventLogEntryType.Error)
         Dim appName As String = "DesktopInteractServer"
         Dim eventData As EventSourceCreationData
@@ -25,16 +26,31 @@ Module Module1
         eLog.WriteEntry(msg, type)
     End Sub
 
-    Private Sub subThread(ByVal _TCPClient As TcpClient)
-        Try
-            timer = Now
-            Dim stream As NetworkStream = _TCPClient.GetStream()
-            Dim bytes(128) As Byte
-            Dim datastring As String = Nothing
-            Dim i As Int32
-            i = stream.Read(bytes, 0, bytes.Length)
-            If i > 0 Then
-                datastring = System.Text.Encoding.ASCII.GetString(bytes, 0, i)
+    Private Class tcpserver
+        Private idletime As Byte = 5
+        Private timer As DateTime
+        Private _TCPListener As TcpListener
+        Private _trd As Thread
+        Private _ttrd As Thread
+
+        Private Sub subThread(ByVal _TCPClient As TcpClient)
+            Try
+                timer = Now
+                _TCPClient.Client.ReceiveTimeout = 10
+                Dim stream As NetworkStream = _TCPClient.GetStream()
+                Dim bytes(128) As Byte
+                Dim datastring As String = ""
+                Dim i As Int32
+                Do
+                    i = stream.Read(bytes, 0, bytes.Length)
+                    datastring &= System.Text.Encoding.ASCII.GetString(bytes, 0, i)
+                    If stream.DataAvailable Then
+                        i = stream.Read(bytes, 0, bytes.Length)
+                    Else
+                        i = 0
+                    End If
+                Loop While i > 0
+
                 Dim operation As String = datastring.Substring(0, 5)
                 Dim parameters As String()
                 If operation.Equals("txtsd") Then
@@ -87,52 +103,106 @@ Module Module1
                     Dim msg As Byte() = System.Text.Encoding.ASCII.GetBytes(reply)
                     stream.Write(msg, 0, msg.Length)
                 End If
-            End If
-            _TCPClient.Close()
-        Catch ex As Exception
-            log(ex.Message)
-        End Try
-    End Sub
+                _TCPClient.Close()
+            Catch ex As Exception
+                log(ex.Message)
+            End Try
+        End Sub
 
-    Private timer As DateTime
-    Private Const idletime = 1
-
-    Private Sub ThreadTask()
-        Try
-            timer = Now
-            Dim _TCPListener As TcpListener
-            Dim localPort As Int32 = 8888
-            Dim localAddr As IPAddress = IPAddress.Parse("192.168.137.1")
-            _TCPListener = New TcpListener(localAddr, localPort)
-            '_TCPListener.Server.ReceiveTimeout = 10
-            '_TCPListener.Server.SendTimeout = 10
-            '_TCPListener.Server.LingerState = New System.Net.Sockets.LingerOption(False, 0)
-            '_TCPListener.Start(512)
-            _TCPListener.Start()
-            Dim keepgoing As Boolean = True
-            Do While keepgoing
-                If _TCPListener.Pending() Then
-                    Dim _trd As Thread = New Thread(AddressOf subThread)
-                    _trd.IsBackground = True
-                    _trd.Start(_TCPListener.AcceptTcpClient())
-                End If
+        Private Sub timerThread()
+            Do
                 Dim currentDate As DateTime = Now
                 If currentDate.Subtract(timer).TotalSeconds > idletime Then
-                    keepgoing = False
+                    _TCPListener.Stop()
+                    _trd.Abort()
+                    _ttrd.Abort()
                 End If
-                Thread.Sleep(2)
+                Thread.Sleep(500)
             Loop
-            _TCPListener.Stop()
-        Catch ex As Exception
-            log(ex.Message)
-        End Try
-    End Sub
+        End Sub
+
+        Private Sub ThreadTask()
+            timer = Now
+            _ttrd = New Thread(AddressOf timerThread)
+            _ttrd.Start()
+            Try
+                Dim localPort As Int32 = 8888
+                Dim localAddr As IPAddress = IPAddress.Parse("127.0.0.1")
+                _TCPListener = New TcpListener(localAddr, localPort)
+                _TCPListener.Start()
+                Do
+                    Dim _tcpClient As TcpClient = _TCPListener.AcceptTcpClient()
+                    Dim trd As Thread = New Thread(AddressOf subThread)
+                    trd.IsBackground = False
+                    trd.Start(_tcpClient)
+                Loop
+                _TCPListener.Stop()
+            Catch ex As Exception
+                log(ex.Message)
+            End Try
+        End Sub
+
+        Public Sub New()
+            MyBase.New()
+            _trd = New Thread(AddressOf ThreadTask)
+            _trd.IsBackground = False
+            _trd.Start()
+        End Sub
+    End Class
+
+    Private Class httpserver
+        Public _httpListener As HttpListener = New HttpListener()
+        Private Sub ThreadTask()
+            _httpListener.Prefixes.Add("http://localhost:8000/")
+            _httpListener.Start()
+            Do
+                Dim context As HttpListenerContext = _httpListener.GetContext()
+                Dim responsetext As String = "<html><body>" & _
+                "url: " & context.Request.Url.ToString() & _
+                "<BR>useragent: " & context.Request.UserAgent.ToString() & _
+                "<BR>keepalive: " & context.Request.KeepAlive & _
+                "<BR>Method: " & context.Request.HttpMethod & _
+                "<BR>IP: " & context.Request.RemoteEndPoint.ToString() & _
+                "<BR>bodyencoding: " & context.Request.ContentEncoding.ToString() & _
+                "<BR>bodylength: " & context.Request.ContentLength64 & _
+                "<BR>protocol: " & context.Request.ProtocolVersion.ToString() & _
+                "<BR>hostname: " & context.Request.UserHostName
+                For Each s As String In context.Request.QueryString.AllKeys
+                    responsetext &= "<BR>" & s & "=" & context.Request.QueryString(s)
+                Next
+                If context.Request.HasEntityBody Then
+                    Dim reader As StreamReader = New StreamReader(context.Request.InputStream, context.Request.ContentEncoding)
+                    responsetext &= "<HR>" & reader.ReadToEnd() & "<HR>"
+                End If
+                responsetext &= "<HR><form action='receive' method='post' enctype='multipart/form-data'><input name='say' id='say' value='Hi'><BR><input type='password' name='password'><button type='submit'>Send</button></form><HR>"
+                responsetext &= "</body></html>"
+                Dim response As HttpListenerResponse = context.Response
+                Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(responsetext)
+                response.ContentLength64 = buffer.Length
+                Dim outstream As Stream = response.OutputStream()
+                outstream.Write(buffer, 0, buffer.Length)
+                outstream.Close()
+            Loop
+            _httpListener.Stop()
+        End Sub
+
+        Public trd As Thread
+
+        Public Sub New()
+            MyBase.New()
+            trd = New Thread(AddressOf ThreadTask)
+            trd.IsBackground = False
+            trd.Start()
+        End Sub
+    End Class
 
     Sub Main()
-        Dim trd As Thread
-        trd = New Thread(AddressOf ThreadTask)
-        trd.IsBackground = False
-        trd.Start()
+        Dim server As tcpserver = New tcpserver()
+        'Dim webserver As httpserver = New httpserver()
+        'Console.ReadKey()
+        'webserver._httpListener.Stop()
+        'webserver._httpListener.Close()
+        'webserver.trd.Abort()
     End Sub
 
     Private Class Functionality
@@ -287,7 +357,7 @@ Module Module1
         End Sub
     End Class
 
-    Public Class ScreenCapture
+    Private Class ScreenCapture
         Public Function CaptureScreen() As Image
             Return CaptureWindow(User32.GetDesktopWindow())
         End Function
@@ -339,7 +409,7 @@ Module Module1
             End Structure
 
 
-            Const KEYEVENTF_KEYUP As UInt32 = &H2
+            Public Const KEYEVENTF_KEYUP As UInt32 = &H2
             'Const KEYEVENTF_UNICODE As UInt32 = &H4
             'Const KEYEVENTF_EXTENDEDKEY As UInt32 = &H1
 
@@ -458,7 +528,7 @@ Module Module1
             Public Declare Sub keybd_event Lib "user32.dll" (ByVal bVk As Byte, ByVal bScan As Byte, ByVal dwFlags As UInteger, ByVal dwExtraInfo As Integer)
             Public Declare Function GetMessageExtraInfo Lib "user32.dll" () As IntPtr
             Public Declare Function GetForegroundWindow Lib "user32" () As IntPtr
-            Public Declare Auto Function GetWindowThreadProcessId Lib "user32.dll" (ByVal hwnd As IntPtr, ByRef lpdwProcessId As Integer) As Integer            
+            Public Declare Auto Function GetWindowThreadProcessId Lib "user32.dll" (ByVal hwnd As IntPtr, ByRef lpdwProcessId As Integer) As Integer
             Public Declare Function GetKeyboardLayout Lib "user32.dll" (ByVal idThread As Integer) As IntPtr
             <DllImport("user32.dll")> Private Shared Function VkKeyScanEx(ByVal ch As Char, ByVal dwhkl As IntPtr) As Short
             End Function
@@ -530,19 +600,19 @@ Module Module1
                 System.Windows.Forms.Cursor.Position = New System.Drawing.Point(CType(p.X, Integer), CType(p.Y, Integer))
             End Sub
 
-            Private Shared APPCOMMAND_VOLUME_MUTE As Integer = &HE80000
-            Private Shared APPCOMMAND_VOLUME_UP As Integer = &HEA0000
-            Private Shared APPCOMMAND_VOLUME_DOWN As Integer = &HE90000
-            Private Shared WM_APPCOMMAND As Integer = &HE319
-            Private Shared MOUSEEVENTF_LEFTDOWN As UInt32 = &HE0002
-            Private Shared MOUSEEVENTF_LEFTUP As UInt32 = &HE0004
-            Private Shared MOUSEEVENTF_RIGHTDOWN As UInt32 = &HE08
-            Private Shared MOUSEEVENTF_RIGHTUP As UInt32 = &HE10
-            Private Shared MOUSEEVENTF_MIDDLEDOWN As UInt32 = &HE0020
-            Private Shared MOUSEEVENTF_MIDDLEUP As UInt32 = &HE0040
-            Private Shared VK_MBUTTON As UInt16 = &HE04
-            Private Shared VK_LBUTTON As UInt16 = &HE01
-            Private Shared VK_RBUTTON As UInt16 = &HE02
+            Public Shared APPCOMMAND_VOLUME_MUTE As Integer = &HE80000
+            Public Shared APPCOMMAND_VOLUME_UP As Integer = &HEA0000
+            Public Shared APPCOMMAND_VOLUME_DOWN As Integer = &HE90000
+            Public Shared WM_APPCOMMAND As Integer = &HE319
+            Public Shared MOUSEEVENTF_LEFTDOWN As UInt32 = &HE0002
+            Public Shared MOUSEEVENTF_LEFTUP As UInt32 = &HE0004
+            Public Shared MOUSEEVENTF_RIGHTDOWN As UInt32 = &HE08
+            Public Shared MOUSEEVENTF_RIGHTUP As UInt32 = &HE10
+            Public Shared MOUSEEVENTF_MIDDLEDOWN As UInt32 = &HE0020
+            Public Shared MOUSEEVENTF_MIDDLEUP As UInt32 = &HE0040
+            Public Shared VK_MBUTTON As UInt16 = &HE04
+            Public Shared VK_LBUTTON As UInt16 = &HE01
+            Public Shared VK_RBUTTON As UInt16 = &HE02
         End Class
     End Class
 End Module

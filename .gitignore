@@ -1,1 +1,6 @@
 /tmp/
+/bin/src/DesktopInteract/obj/
+/bin/src/DesktopInteract/bin/Debug/
+/bin/src/DesktopInteractServer/bin/Debug/
+/bin/src/DesktopInteractServer/obj/
+/bin/src/DesktopInteractServer/bin/x64/

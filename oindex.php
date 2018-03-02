@@ -9,13 +9,12 @@ $mobile=true;
 echo '<html>
 <head>
 <meta http-equiv="Cache-Control" content="no-store" />
-<link rel="shortcut icon" href="'.$base.'/removedesktop.ico" type="image/x-icon" />
 <script type="text/javascript" src="'.$base.'/js/jquery.min.js"></script>
 <script type="text/javascript" src="'.$base.'/js/interactions.js"></script>
 '.($mobile?'<script type="text/javascript" src="'.$base.'/js/mobile.js"></script>':'').'
 <link rel="stylesheet" type="text/css" href="'.$base.'/js/styles.css">
 </head>
-<body style="padding:0;margin:0;z-index:50;">
+<body style="padding:0;margin:0;">
 <div class="message"></div>
 <div class="controls">
   <span class="formheader">Volume</span>
@@ -34,7 +33,7 @@ echo '<html>
   <input class="drawfps formelement" type="checkbox">Show FPS<BR>
   <input class="hidecontrols formelement" type="button" value="Hide">
 </div>
-<div class="content" style="padding:0;margin:0;text-align:center;">
+<div class="content" style="padding:0;margin:0;text-align:center;">  
   <div class="cvdiv">
     <canvas class="overlay"></canvas>
     <img id="mousepointer" src="/windows/cursor.png" style="z-index:0;position:absolute;">
