@@ -430,7 +430,7 @@ Module Module1
             refresh.IsBackground = True
             refresh.Start()
             Try
-                Dim port As Integer = 80
+                Dim port As Integer = 8888
                 Dim addresses As System.Net.IPAddress() = System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName())
                 For Each ip As System.Net.IPAddress In addresses
                     If ip.AddressFamily = AddressFamily.InterNetwork Then
