@@ -131,12 +131,6 @@ Module Module1
         Private Sub FileServeThread(ByVal context As HttpListenerContext)
             timer = Now
             Dim max As Long = 9223372036854775807
-            Dim report As String = "[HTTP Request]" & Environment.NewLine & "Headers" & Environment.NewLine
-            Dim keys As String() = context.Request.Headers.AllKeys
-            For i As Integer = 0 To keys.Length - 1
-                report &= " " & keys(i) & " = " & context.Request.Headers.Item(keys(i)) & Environment.NewLine
-            Next
-            log(report, EventLogEntryType.Information)
             Dim userid As String = System.Text.Encoding.Unicode.GetString(MD5.Create().ComputeHash(System.Text.Encoding.Unicode.GetBytes(context.Request.RemoteEndPoint.ToString() & context.Request.UserAgent.ToString())))
             Dim user As Integer = FindUser(userid)
             If user = -1 Then
@@ -149,8 +143,16 @@ Module Module1
                 Dim serverip As String = context.Request.LocalEndPoint.ToString()
 
                 If context.Request.RawUrl.Equals("/audio.mp3") Then
+                    Dim report As String = "[HTTP Request]" & Environment.NewLine & "Headers" & Environment.NewLine
+                    Dim keys As String() = context.Request.Headers.AllKeys
+                    For i As Integer = 0 To keys.Length - 1
+                        report &= " " & keys(i) & " = " & context.Request.Headers.Item(keys(i)) & Environment.NewLine
+                    Next
+                    log(report, EventLogEntryType.Information)
+
                     Dim reqrange As String = context.Request.Headers.Item("Range")
-                    If reqrange Is Nothing Then
+                    Dim reqaccept As String = context.Request.Headers.Item("Accept")
+                    If (reqrange Is Nothing And reqaccept Is Nothing) Or Not reqaccept.Equals("*/*") Then
                         Dim buffer As Byte() = getbuffer(0, memcache.Length)
                         Dim tmpbuffer As Byte() = New Byte(buffer.Length + mp3header.Length - 1) {}
                         mp3header.CopyTo(tmpbuffer, 0)
@@ -172,34 +174,39 @@ Module Module1
                         Dim byteto As Long = 0
                         Dim refuseranged As Boolean = False
                         Dim requestedbytes As Long = -1
-                        If reqrange.IndexOf("-") <> -1 Then
-                            bytefroms = reqrange.Substring(reqrange.IndexOf("=") + 1, reqrange.IndexOf("-") - reqrange.IndexOf("=") - 1)
-                        End If
-                        If bytefroms = "NA" Then
-                            bytefrom = -1
-                            refuseranged = True
-                        Else
-                            Try
-                                bytefrom = Convert.ToInt64(bytefroms)
-                            Catch ex As Exception
-                                bytefrom = -1
-                                refuseranged = True
-                            End Try
-                        End If
-                        If reqrange.IndexOf("/") <> -1 Then
-                            bytetos = reqrange.Substring(reqrange.IndexOf("-") + 1, reqrange.IndexOf("/") - reqrange.IndexOf("-") - 1)
-                        Else
-                            bytetos = reqrange.Substring(reqrange.IndexOf("-") + 1, reqrange.Length - reqrange.IndexOf("-") - 1)
-                        End If
-                        If bytetos = "NA" Then
+                        If reqaccept.Equals("*/*") Then
                             byteto = -1
                         Else
-                            Try
-                                byteto = Convert.ToInt64(bytetos)
-                            Catch ex As Exception
+                            If reqrange.IndexOf("-") <> -1 Then
+                                bytefroms = reqrange.Substring(reqrange.IndexOf("=") + 1, reqrange.IndexOf("-") - reqrange.IndexOf("=") - 1)
+                            End If
+                            If bytefroms = "NA" Then
+                                bytefrom = -1
+                                refuseranged = True
+                            Else
+                                Try
+                                    bytefrom = Convert.ToInt64(bytefroms)
+                                Catch ex As Exception
+                                    bytefrom = -1
+                                    refuseranged = True
+                                End Try
+                            End If
+                            If reqrange.IndexOf("/") <> -1 Then
+                                bytetos = reqrange.Substring(reqrange.IndexOf("-") + 1, reqrange.IndexOf("/") - reqrange.IndexOf("-") - 1)
+                            Else
+                                bytetos = reqrange.Substring(reqrange.IndexOf("-") + 1, reqrange.Length - reqrange.IndexOf("-") - 1)
+                            End If
+                            If bytetos = "NA" Then
                                 byteto = -1
-                            End Try
+                            Else
+                                Try
+                                    byteto = Convert.ToInt64(bytetos)
+                                Catch ex As Exception
+                                    byteto = -1
+                                End Try
+                            End If
                         End If
+
                         If byteto <> -1 Then
                             requestedbytes = byteto - bytefrom + 1
                         End If
@@ -238,6 +245,9 @@ Module Module1
                         Dim datalength As Long = If(bytefrom = 0, mp3header.Length + mp3buffer.Length, mp3buffer.Length)
                         If bytefrom <> 0 Then
                             bytefrom += mp3header.Length
+                        End If
+                        If bytefrom = 0 And byteto <> -1 And byteto + 1 < mp3header.Length Then
+                            refuseranged = True
                         End If
                         If Not refuseranged Then
                             response.StatusCode = 206

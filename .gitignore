@@ -3,3 +3,6 @@
 /bin/src/DesktopInteractServer/obj/
 /bin/src/DesktopInteractServer/bin/x64/
 /bin/src/SoundCapture/obj/
+/bin/src/DesktopInteract/bin/
+/bin/src/DesktopInteractServer/bin/
+/bin/src/SoundCapture/bin/
