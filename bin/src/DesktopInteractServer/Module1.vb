@@ -1,4 +1,5 @@
-﻿Imports System.Runtime.InteropServices
+﻿Imports System.Security.Cryptography
+Imports System.Runtime.InteropServices
 Imports System.Drawing
 Imports System.Drawing.Imaging
 Imports System.Windows.Forms
@@ -11,7 +12,7 @@ Imports System.Net
 Imports System.ComponentModel
 Imports System.Text
 Imports System.Web
-
+Imports SoundCapture
 
 Module Module1
     Private Sub log(ByVal msg As String, Optional ByVal type As EventLogEntryType = EventLogEntryType.Error)
@@ -26,170 +27,421 @@ Module Module1
         eLog.WriteEntry(msg, type)
     End Sub
 
-    Private Class tcpserver
+    Private Class httpserver
         Private idletime As Byte = 5
+        Dim _snd As CoreAudio
         Private timer As DateTime
-        Private _TCPListener As TcpListener
-        Private _trd As Thread
         Private _ttrd As Thread
+        Private trd As Thread
+        Private refresh As Thread
+        Public _httpListener As HttpListener = New HttpListener()
+        Public keepgoing As Boolean = True
+        Dim sessions As List(Of usersession) = New List(Of usersession)
+        Private memcache As MemoryStream = New MemoryStream()
+        Private Shared currentposition As Long = 0
+        Private Shared locksync As Object = New Object
+        Private mp3header As Byte() = New Byte() {255, 251, 144, 4, 0, 15, 240, 0, 0, 105, 0, 0, 0, 8, 0, 0, 13, 32, 0, 0, 1, 0, 0, 1, 164, 0, 0, 0, 32, 0, 0, 52, 128, 0, 0, 4, 76, 65, 77, 69, 51, 46, 57, 57, 46, 49, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85}
 
-        Private Sub subThread(ByVal _TCPClient As TcpClient)
-            Try
-                timer = Now
-                _TCPClient.Client.ReceiveTimeout = 10
-                Dim stream As NetworkStream = _TCPClient.GetStream()
-                Dim bytes(128) As Byte
-                Dim datastring As String = ""
-                Dim i As Int32
-                Do
-                    i = stream.Read(bytes, 0, bytes.Length)
-                    datastring &= System.Text.Encoding.ASCII.GetString(bytes, 0, i)
-                    If stream.DataAvailable Then
-                        i = stream.Read(bytes, 0, bytes.Length)
-                    Else
-                        i = 0
-                    End If
-                Loop While i > 0
+        Private Class usersession
+            Public userid As String
+            Public lastrequest As DateTime
+            Public position As Long
+            Public startpos As Long
+            Public Sub New(ByVal _userid As String)
+                userid = _userid
+                position = 0
+                SyncLock locksync
+                    startpos = currentposition
+                End SyncLock
+                lastrequest = Now
+            End Sub
+        End Class
 
-                Dim operation As String = datastring.Substring(0, 5)
-                Dim parameters As String()
-                If operation.Equals("txtsd") Then
-                    parameters = {datastring.Substring(5)}
-                Else
-                    parameters = datastring.Substring(5).Split(",")
+        Private Function FindUser(ByVal _userid As String) As Integer
+            For i As Integer = 0 To sessions.Count - 1
+                If sessions(i).userid.Equals(_userid) Then
+                    Return i
                 End If
-                Dim reply As String
-                Select Case operation
-                    Case "txtsd"
-                        Functionality.sendText(parameters(0))
-                    Case "backs"
-                        Functionality.sendKey(8)
-                    Case "mousd"
-                        Functionality.mousemove(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                        Functionality.mousedown()
-                    Case "mousu"
-                        Functionality.mousemove(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                        Functionality.mouseup()
-                    Case "mousm"
-                        Functionality.mousemove(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                    Case "gscre"
-                        If Functionality.grab(parameters(0), Convert.ToInt32(parameters(1)), Convert.ToInt32(parameters(2)), CType(Convert.ToInt32(parameters(3)), Long)) Then
-                            reply = "1"
-                        Else
-                            reply = "0"
-                        End If
-                    Case "gscrr"
-                        Dim retval As Integer() = Functionality.getscreen_resolution()
-                        reply = retval(0) & "," & retval(1)
-                    Case "gmpos"
-                        Dim retval As Integer() = Functionality.getmousepos()
-                        reply = retval(0) & "," & retval(1)
-                    Case "smcll"
-                        Functionality.mouseclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                    Case "smclr"
-                        Functionality.mouseclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                    Case "smdcl"
-                        Functionality.mousedblclickl(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                    Case "smdcr"
-                        Functionality.mousedblclickr(Convert.ToInt32(parameters(0)), Convert.ToInt32(parameters(1)))
-                    Case "svmut"
-                        Functionality.mute()
-                    Case "svodo"
-                        Functionality.volumedown()
-                    Case "svoup"
-                        Functionality.volumeup()
-                End Select
-                If Not reply Is Nothing Then
-                    Dim msg As Byte() = System.Text.Encoding.ASCII.GetBytes(reply)
-                    stream.Write(msg, 0, msg.Length)
-                End If
-                _TCPClient.Close()
-            Catch ex As Exception
-                log(ex.Message)
-            End Try
-        End Sub
+            Next
+            Return -1
+        End Function
 
-        Private Sub timerThread()
+        Private Sub timerThread()        
             Do
                 Dim currentDate As DateTime = Now
                 If currentDate.Subtract(timer).TotalSeconds > idletime Then
-                    _TCPListener.Stop()
-                    _trd.Abort()
-                    _ttrd.Abort()
+                    _snd.Dispose()
+                    keepgoing = False
+                    Try
+                        If _httpListener.IsListening Then
+                            _httpListener.Stop()
+                        End If
+                        _httpListener.Abort()
+                        _httpListener.Close()
+                    Catch ex As Exception
+                    End Try
+                    refresh.Abort()
+                    trd.Abort()
                 End If
-                Thread.Sleep(500)
-            Loop
+                Thread.Sleep(50)
+            Loop Until Not keepgoing
+        End Sub
+
+        Private Sub getsoundsamples()
+            While keepgoing
+                Dim buffer As Byte() = _snd.readbytes()
+                If buffer.Length > 0 Then
+                    SyncLock locksync
+                        currentposition = memcache.Length
+                        memcache.Write(buffer, 0, buffer.Length)
+                    End SyncLock
+                End If
+                Thread.Sleep(30)
+            End While
+        End Sub
+
+        Private Function getbuffer(ByVal startpos As Long, ByVal count As Long) As Byte()
+            If count > 0 Then
+                Dim buffer As Byte() = New Byte(count - 1) {}
+                SyncLock locksync
+                    Dim oldpos As Long = memcache.Position
+                    memcache.Position = startpos
+                    memcache.Read(buffer, 0, count)
+                    memcache.Position = oldpos
+                End SyncLock
+                Return buffer
+            Else
+                Return New Byte() {}
+            End If
+        End Function
+
+        Private Sub loginfo(ByVal info As String(,), Optional ByVal type As EventLogEntryType = EventLogEntryType.Information)
+            Dim msg As String = ""
+            For i As Integer = 0 To info.GetUpperBound(0)
+                If info(i, 1).Equals("") Then
+                    msg &= info(i, 0) & Environment.NewLine
+                Else
+                    msg &= info(i, 0) & " = " & info(i, 1) & Environment.NewLine
+                End If
+
+            Next
+            log(msg, EventLogEntryType.Information)
+        End Sub
+
+        Private Sub FileServeThread(ByVal context As HttpListenerContext)
+            timer = Now
+            Dim max As Long = 9223372036854775807
+            Dim report As String = "[HTTP Request]" & Environment.NewLine & "Headers" & Environment.NewLine
+            Dim keys As String() = context.Request.Headers.AllKeys
+            For i As Integer = 0 To keys.Length - 1
+                report &= " " & keys(i) & " = " & context.Request.Headers.Item(keys(i)) & Environment.NewLine
+            Next
+            log(report, EventLogEntryType.Information)
+            Dim userid As String = System.Text.Encoding.Unicode.GetString(MD5.Create().ComputeHash(System.Text.Encoding.Unicode.GetBytes(context.Request.RemoteEndPoint.ToString() & context.Request.UserAgent.ToString())))
+            Dim user As Integer = FindUser(userid)
+            If user = -1 Then
+                sessions.Add(New usersession(userid))
+                user = FindUser(userid)
+            End If
+            Try
+                Dim response As HttpListenerResponse = context.Response
+                Dim outstream As Stream = response.OutputStream()
+                Dim serverip As String = context.Request.LocalEndPoint.ToString()
+
+                If context.Request.RawUrl.Equals("/audio.mp3") Then
+                    Dim reqrange As String = context.Request.Headers.Item("Range")
+                    If reqrange Is Nothing Then
+                        Dim buffer As Byte() = getbuffer(0, memcache.Length)
+                        Dim tmpbuffer As Byte() = New Byte(buffer.Length + mp3header.Length - 1) {}
+                        mp3header.CopyTo(tmpbuffer, 0)
+                        buffer.CopyTo(tmpbuffer, mp3header.Length)
+                        response.StatusCode = 200
+                        response.ContentType = "audio/mpeg"
+                        response.AddHeader("Content-Disposition", "attachment; filename=""audio.mp3""")
+                        outstream.Write(tmpbuffer, 0, tmpbuffer.Length)
+                        loginfo(New String(,) {{"Normal Response", ""}, _
+                                               {"userid ", user}, _
+                                               {"currentposition ", currentposition}, _
+                                               {"user startpos", sessions.Item(user).startpos}, _
+                                               {"BufferSize", memcache.Length}, _
+                                               {"data sent", tmpbuffer.Length}}, EventLogEntryType.Warning)
+                    Else
+                        Dim bytefroms As String = "NA"
+                        Dim bytetos As String = "NA"
+                        Dim bytefrom As Long = 0
+                        Dim byteto As Long = 0
+                        Dim refuseranged As Boolean = False
+                        Dim requestedbytes As Long = -1
+                        If reqrange.IndexOf("-") <> -1 Then
+                            bytefroms = reqrange.Substring(reqrange.IndexOf("=") + 1, reqrange.IndexOf("-") - reqrange.IndexOf("=") - 1)
+                        End If
+                        If bytefroms = "NA" Then
+                            bytefrom = -1
+                            refuseranged = True
+                        Else
+                            Try
+                                bytefrom = Convert.ToInt64(bytefroms)
+                            Catch ex As Exception
+                                bytefrom = -1
+                                refuseranged = True
+                            End Try
+                        End If
+                        If reqrange.IndexOf("/") <> -1 Then
+                            bytetos = reqrange.Substring(reqrange.IndexOf("-") + 1, reqrange.IndexOf("/") - reqrange.IndexOf("-") - 1)
+                        Else
+                            bytetos = reqrange.Substring(reqrange.IndexOf("-") + 1, reqrange.Length - reqrange.IndexOf("-") - 1)
+                        End If
+                        If bytetos = "NA" Then
+                            byteto = -1
+                        Else
+                            Try
+                                byteto = Convert.ToInt64(bytetos)
+                            Catch ex As Exception
+                                byteto = -1
+                            End Try
+                        End If
+                        If byteto <> -1 Then
+                            requestedbytes = byteto - bytefrom + 1
+                        End If
+                        If bytefrom = 0 Then
+                            requestedbytes -= mp3header.Length
+                        Else
+                            bytefrom -= mp3header.Length
+                        End If
+                        Dim mp3buffer As Byte() = New Byte() {}
+                        If byteto = -1 Then
+                            loginfo(New String(,) {{"ranged - no end", ""}, _
+                                                   {"userid ", user}, _
+                                                   {"readfrom", sessions.Item(user).startpos + bytefrom}, _
+                                                   {"bytesread", (memcache.Length - sessions.Item(user).startpos - bytefrom)}, _
+                                                   {"currentbuffer", memcache.Length}})
+                            mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, memcache.Length - sessions.Item(user).startpos - bytefrom)
+                        ElseIf requestedbytes > 0 Then
+                            If memcache.Length - sessions.Item(user).startpos - bytefrom > requestedbytes Then
+                                loginfo(New String(,) {{"ranged - with end - can send requested", ""}, _
+                                                       {"userid ", user}, _
+                                                       {"readfrom", sessions.Item(user).startpos + bytefrom}, _
+                                                       {"bytesread", requestedbytes}, _
+                                                       {"currentbuffer", memcache.Length}}, EventLogEntryType.Warning)
+                                mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, requestedbytes)
+                            Else
+                                loginfo(New String(,) {{"ranged - with end - cannot send requested", ""}, _
+                                                       {"userid ", user}, _
+                                                       {"readfrom", sessions.Item(user).startpos + bytefrom}, _
+                                                       {"bytesread", memcache.Length - sessions.Item(user).startpos - bytefrom}, _
+                                                       {"currentbuffer", memcache.Length}}, EventLogEntryType.Warning)
+                                mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, memcache.Length - sessions.Item(user).startpos - bytefrom)
+                            End If
+                        ElseIf requestedbytes < 0 Then
+                            refuseranged = True
+                        End If
+                        Dim datalength As Long = If(bytefrom = 0, mp3header.Length + mp3buffer.Length, mp3buffer.Length)
+                        If bytefrom <> 0 Then
+                            bytefrom += mp3header.Length
+                        End If
+                        If Not refuseranged Then
+                            response.StatusCode = 206
+                            response.StatusDescription = "Partial content"
+                            response.AddHeader("Content-Type", "audio/mpeg")
+                            response.AddHeader("Content-Range", "bytes " & bytefrom & "-" & (datalength + bytefrom - 1) & "/" & max)
+                            If bytefrom = 0 Then
+                                Dim buffer As Byte() = New Byte(mp3header.Length + mp3buffer.Length - 1) {}
+                                mp3header.CopyTo(buffer, 0)
+                                mp3buffer.CopyTo(buffer, mp3header.Length)
+                                outstream.Write(buffer, 0, buffer.Length)
+                            Else
+                                If mp3buffer.Length > 0 Then
+                                    outstream.Write(mp3buffer, 0, mp3buffer.Length)
+                                    outstream.Flush()
+                                End If
+                            End If
+                            loginfo(New String(,) {{"Ranged Response", ""}, _
+                                                   {"userid", user}, _
+                                                   {"range served", bytefrom & "-" & (datalength + bytefrom - 1) & "/" & max}, _
+                                                   {"bytes sent", mp3buffer.Length}})
+                            sessions.Item(user).position += mp3buffer.Length
+                        Else
+                            response.StatusCode = 416
+                            response.StatusDescription = "Requested range not satisfiable"
+                            response.AddHeader("Content-Range", "bytes 0-" & (memcache.Length - sessions.Item(user).startpos + mp3header.Length - 1) & "/*")
+                            loginfo(New String(,) {{"Ranged Refused", ""}, _
+                                                   {"userid", user}, _
+                                                   {"range suggested", "0-" & (memcache.Length - sessions.Item(user).startpos + mp3header.Length - 1) & "/*"}}, EventLogEntryType.Warning)
+                        End If
+                        sessions.Item(user).lastrequest = Now
+                    End If
+                ElseIf context.Request.RawUrl.Equals("/cursor.png") Or context.Request.RawUrl.Equals("/favicon.ico") Or context.Request.RawUrl.Equals("/interactions.js") Or context.Request.RawUrl.Equals("/jquery.min.js") Or context.Request.RawUrl.Equals("/styles.css") Then
+                    Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
+                    filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "\files").Replace("\", "/")
+                    Dim buffer As Byte() = File.ReadAllBytes(filePath & context.Request.RawUrl)
+                    outstream.Write(buffer, 0, buffer.Length)
+                ElseIf context.Request.RawUrl.Equals("/") Then
+                    Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
+                    filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "/files/index.html").Replace("\", "/")
+                    Dim buffer As Byte() = File.ReadAllBytes(filePath)
+                    outstream.Write(buffer, 0, buffer.Length)
+                Else
+                    Dim requesturl As String = context.Request.RawUrl
+                    If requesturl.IndexOf("?") >= 0 Then
+                        requesturl = requesturl.Substring(0, requesturl.IndexOf("?"))
+                    End If
+                    If requesturl.Equals("/screen.jpeg") Then
+                        Dim w As Integer = Screen.PrimaryScreen.Bounds.Width
+                        Dim h As Integer = Screen.PrimaryScreen.Bounds.Height
+                        If Not context.Request.QueryString.Item("w") Is Nothing And Not context.Request.QueryString.Item("h") Is Nothing Then
+                            Try
+                                w = Convert.ToInt32(context.Request.QueryString.Item("w"))
+                                h = Convert.ToInt32(context.Request.QueryString.Item("h"))
+                                Dim buffer As Byte() = Functionality.getScreenshot(w, h, 80)
+                                outstream.Write(buffer, 0, buffer.Length)
+                            Catch ex As Exception
+                                Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
+                                filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "/files/error.png").Replace("\", "/")
+                                Dim buffer As Byte() = File.ReadAllBytes(filePath)
+                                outstream.Write(buffer, 0, buffer.Length)
+                            End Try
+                        Else
+                            Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
+                            filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "/files/error.png").Replace("\", "/")
+                            Dim buffer As Byte() = File.ReadAllBytes(filePath)
+                            outstream.Write(buffer, 0, buffer.Length)
+                        End If
+                    ElseIf requesturl.Equals("/receiveinput") Then
+                        If Not context.Request.QueryString.Item("action") Is Nothing Then
+                            Select Case context.Request.QueryString.Item("action")
+                                Case "getscreensize"
+                                    Dim retval As Integer() = Functionality.getscreen_resolution()
+                                    Dim reply As String = retval(0) & "," & retval(1)
+                                    Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(reply)
+                                    outstream.Write(buffer, 0, buffer.Length)
+                                Case "getmouse"
+                                    Dim retval As Integer() = Functionality.getmousepos()
+                                    Dim reply As String = retval(0) & "," & retval(1)
+                                    Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(reply)
+                                    outstream.Write(buffer, 0, buffer.Length)
+                                Case "sendtext"
+                                    If Not context.Request.QueryString.Item("text") Is Nothing Then
+                                        Functionality.sendText(context.Request.QueryString.Item("text"))
+                                    End If
+                                Case "click"
+                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                        Try
+                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                            Functionality.mouseclickl(x, y)
+                                        Catch ex As Exception
+                                        End Try
+                                    End If
+                                Case "clickr"
+                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                        Try
+                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                            Functionality.mouseclickr(x, y)
+                                        Catch ex As Exception
+                                        End Try
+                                    End If
+                                Case "clickd"
+                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                        Try
+                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                            Functionality.mousedblclickl(x, y)
+                                        Catch ex As Exception
+                                        End Try
+                                    End If
+                                Case "clickrd"
+                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                        Try
+                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                            Functionality.mousedblclickr(x, y)
+                                        Catch ex As Exception
+                                        End Try
+                                    End If
+                                Case "mute"
+                                    Functionality.mute()
+                                Case "voldown"
+                                    Functionality.volumedown()
+                                Case "volup"
+                                    Functionality.volumeup()
+                                Case "moused"
+                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                        Try
+                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                            Functionality.mousemove(x, y)
+                                            Functionality.mousedown()
+                                        Catch ex As Exception
+                                        End Try
+                                    End If
+                                Case "mouseu"
+                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                        Try
+                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                            Functionality.mousemove(x, y)
+                                            Functionality.mouseup()
+                                        Catch ex As Exception
+                                        End Try
+                                    End If
+                                Case "mousem"
+                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                        Try
+                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                            Functionality.mousemove(x, y)
+                                        Catch ex As Exception
+                                        End Try
+                                    End If
+                                Case "sendbackspace"
+                                    Functionality.sendKey(8)
+                            End Select
+                        End If
+                    End If
+                End If
+                outstream.Close()
+            Catch ex As Exception
+                log("[FileServeThread]" & Environment.NewLine & ex.Message & Environment.NewLine & ex.Source & Environment.NewLine & ex.StackTrace, EventLogEntryType.Error)
+            End Try
         End Sub
 
         Private Sub ThreadTask()
             timer = Now
             _ttrd = New Thread(AddressOf timerThread)
             _ttrd.Start()
+            refresh = New Thread(AddressOf getsoundsamples)
+            refresh.IsBackground = True
+            refresh.Start()
             Try
-                Dim localPort As Int32 = 8888
-                Dim localAddr As IPAddress = IPAddress.Parse("127.0.0.1")
-                _TCPListener = New TcpListener(localAddr, localPort)
-                _TCPListener.Start()
+                Dim port As Integer = 81
+                Dim addresses As System.Net.IPAddress() = System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName())
+                For Each ip As System.Net.IPAddress In addresses
+                    If Not ip.AddressFamily.ToString().Equals("InterNetworkV6") Then
+                        _httpListener.Prefixes.Add("http://" & ip.ToString() & ":" & port & "/")
+                    End If
+                Next
+                _httpListener.Prefixes.Add("http://localhost:" & port & "/")
+                _httpListener.Prefixes.Add("http://*:" & port & "/")
+                _httpListener.Prefixes.Add("http://+:" & port & "/")
+                _httpListener.Start()
                 Do
-                    Dim _tcpClient As TcpClient = _TCPListener.AcceptTcpClient()
-                    Dim trd As Thread = New Thread(AddressOf subThread)
-                    trd.IsBackground = False
-                    trd.Start(_tcpClient)
-                Loop
-                _TCPListener.Stop()
-            Catch ex As Exception
-                log(ex.Message)
+                    Dim context As HttpListenerContext
+                    context = _httpListener.GetContext()
+                    Dim t As Thread = New Thread(AddressOf FileServeThread)
+                    t.IsBackground = True
+                    t.Start(context)
+                Loop Until Not keepgoing
+            Catch e As Exception
+                If Not e.Message.Equals("The I/O operation has been aborted because of either a thread exit or an application request") Then
+                    log("[HttpListener]" & Environment.NewLine + e.Message, EventLogEntryType.Error)
+                End If
             End Try
         End Sub
 
         Public Sub New()
             MyBase.New()
-            _trd = New Thread(AddressOf ThreadTask)
-            _trd.IsBackground = False
-            _trd.Start()
-        End Sub
-    End Class
-
-    Private Class httpserver
-        Public _httpListener As HttpListener = New HttpListener()
-        Private Sub ThreadTask()
-            _httpListener.Prefixes.Add("http://localhost:8000/")
-            _httpListener.Start()
-            Do
-                Dim context As HttpListenerContext = _httpListener.GetContext()
-                Dim responsetext As String = "<html><body>" & _
-                "url: " & context.Request.Url.ToString() & _
-                "<BR>useragent: " & context.Request.UserAgent.ToString() & _
-                "<BR>keepalive: " & context.Request.KeepAlive & _
-                "<BR>Method: " & context.Request.HttpMethod & _
-                "<BR>IP: " & context.Request.RemoteEndPoint.ToString() & _
-                "<BR>bodyencoding: " & context.Request.ContentEncoding.ToString() & _
-                "<BR>bodylength: " & context.Request.ContentLength64 & _
-                "<BR>protocol: " & context.Request.ProtocolVersion.ToString() & _
-                "<BR>hostname: " & context.Request.UserHostName
-                For Each s As String In context.Request.QueryString.AllKeys
-                    responsetext &= "<BR>" & s & "=" & context.Request.QueryString(s)
-                Next
-                If context.Request.HasEntityBody Then
-                    Dim reader As StreamReader = New StreamReader(context.Request.InputStream, context.Request.ContentEncoding)
-                    responsetext &= "<HR>" & reader.ReadToEnd() & "<HR>"
-                End If
-                responsetext &= "<HR><form action='receive' method='post' enctype='multipart/form-data'><input name='say' id='say' value='Hi'><BR><input type='password' name='password'><button type='submit'>Send</button></form><HR>"
-                responsetext &= "</body></html>"
-                Dim response As HttpListenerResponse = context.Response
-                Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(responsetext)
-                response.ContentLength64 = buffer.Length
-                Dim outstream As Stream = response.OutputStream()
-                outstream.Write(buffer, 0, buffer.Length)
-                outstream.Close()
-            Loop
-            _httpListener.Stop()
-        End Sub
-
-        Public trd As Thread
-
-        Public Sub New()
-            MyBase.New()
+            _snd = New CoreAudio()
             trd = New Thread(AddressOf ThreadTask)
             trd.IsBackground = False
             trd.Start()
@@ -197,12 +449,7 @@ Module Module1
     End Class
 
     Sub Main()
-        Dim server As tcpserver = New tcpserver()
-        'Dim webserver As httpserver = New httpserver()
-        'Console.ReadKey()
-        'webserver._httpListener.Stop()
-        'webserver._httpListener.Close()
-        'webserver.trd.Abort()
+        Dim webserver As httpserver = New httpserver()
     End Sub
 
     Private Class Functionality
@@ -230,7 +477,35 @@ Module Module1
                 newImage.Save(path, GetEncoderInfo(ImageFormat.Jpeg), myEncoderParameters)
                 newImage.Dispose()
             Catch ex As Exception
-                log(ex.Message)
+                log("[Image Save]" & Environment.NewLine & ex.Message)
+            End Try
+        End Sub
+
+        Private Shared Sub SaveScaledImage(ByVal strm As MemoryStream, ByVal OldImage As Image, ByVal newWidth As Integer, ByVal newHeight As Integer, ByVal quality As Long)
+            Dim originalWidth As Integer = OldImage.Width
+            Dim originalHeight As Integer = OldImage.Height
+            Dim percentWidth As Single = newWidth / originalWidth
+            Dim percentHeight As Single = newHeight / originalHeight
+            Dim percent As Single = If(percentHeight < percentWidth, percentHeight, percentWidth)
+            newWidth = CInt(originalWidth * percent)
+            newHeight = CInt(originalHeight * percent)
+            Dim newImage As Image = New Bitmap(newWidth, newHeight)
+            Using graphicsHandle As Graphics = Graphics.FromImage(newImage)
+                graphicsHandle.InterpolationMode = InterpolationMode.HighQualityBilinear
+                graphicsHandle.DrawImage(OldImage, 0, 0, newWidth, newHeight)
+            End Using
+            Dim myEncoder As System.Drawing.Imaging.Encoder
+            Dim myEncoderParameter As EncoderParameter
+            Dim myEncoderParameters As EncoderParameters
+            myEncoder = System.Drawing.Imaging.Encoder.Quality
+            myEncoderParameters = New EncoderParameters(1)
+            myEncoderParameter = New EncoderParameter(myEncoder, CType(quality, Int32))
+            myEncoderParameters.Param(0) = myEncoderParameter
+            Try
+                newImage.Save(strm, GetEncoderInfo(ImageFormat.Jpeg), myEncoderParameters)
+                newImage.Dispose()
+            Catch ex As Exception
+                log("[Image Save]" & Environment.NewLine & ex.Message)
             End Try
         End Sub
 
@@ -333,9 +608,24 @@ Module Module1
                 img.Dispose()
                 Return True
             Catch ex As Exception
-                log(ex.InnerException.ToString)
+                log("[Screen Capture]" & Environment.NewLine & ex.InnerException.ToString)
             End Try
             Return False
+        End Function
+
+        Public Shared Function getScreenshot(ByVal width As Integer, ByVal height As Integer, ByVal quality As Long) As Byte()
+            Try
+                Dim scap As ScreenCapture = New ScreenCapture()
+                Dim img As Image = scap.CaptureScreen()
+                Dim converter As New ImageConverter
+                Dim ms = New MemoryStream()
+                SaveScaledImage(ms, img, width, height, quality)
+                img.Dispose()
+                Return ms.GetBuffer
+            Catch ex As Exception
+                log("[getScreenshot]" & Environment.NewLine & ex.InnerException.ToString)
+            End Try
+            Return New Byte() {}
         End Function
 
         Private Shared Function GetEncoderInfo(ByVal format As ImageFormat) As ImageCodecInfo

@@ -1,4 +1,5 @@
 var refreshrate=0;
+var timeout=1000;
 var mouserefresh=50;
 var maxwidth;
 var maxheight;
@@ -24,12 +25,13 @@ var starty=0;
 var lastx=0;
 var lasty=0;
 var mdown=false;
+var playaudio=true;
 
 function getmouse() {
   var sendaction="getmouse";
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:sendaction}
     }).done(function(data) {
         var pos=data.split(",");
@@ -41,8 +43,8 @@ function getmouse() {
 function getserverscreensize() {
   var sendaction="getscreensize";
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:sendaction}
     }).done(function(data) {
         var pos=data.split(",");
@@ -51,7 +53,54 @@ function getserverscreensize() {
     });
 }
 
-function sendclick(mx,my) {    
+function startplay() {
+  playaudio=true;
+  $("#aplay")[0].load();
+  setTimeout(tryagain,500);
+}
+
+function stopplay() {
+  playaudio=false;
+  $("#aplay")[0].pause();
+}
+
+function tryagain() {
+  if (!playaudio || $(".stopaudio").prop("checked")) {
+    return;
+  }
+  var aud = $("#aplay")[0];
+  if (aud.duration > 0 && !aud.paused)
+      return;
+  else
+    aud.load();
+  setTimeout(tryagain,500);
+}
+
+function playifnotplaying() {
+  if (!playaudio || $(".stopaudio").prop("checked")) {
+    return;
+  }
+  aud=$("#aplay")[0];
+  if (!(aud.duration > 0 && !aud.paused))
+    aud.play();  
+}
+
+function handleaudio() {
+  var aud = $("#aplay")[0];
+  aud.load();
+  aud.volume=1;  
+  aud.onloadeddata  = function() {playifnotplaying();};
+  aud.onstalled = function() {aud.load();};
+  aud.onerror = function() {aud.load();};
+  aud.onsuspend = function() {aud.load();};
+  aud.onended  = function() {aud.load();};
+  aud.oncanplay = function() {playifnotplaying();};
+  aud.onabort = function() {aud.load();};
+  aud.onwaiting = function() {aud.load();};
+  setTimeout(tryagain,2000);
+}
+
+function sendclick(mx,my) {
   var clicktype=$("input[name='mouseclick']:checked").val();
   var mousebutton=$("input[name='mousebutton']:checked").val();
   var sendaction;
@@ -60,35 +109,35 @@ function sendclick(mx,my) {
       sendaction="click";
     } else {
       sendaction="clickd";
-    }      
+    }
   } else {
     if (clicktype==="singleclick") {
       sendaction="clickr";
     } else {
-      sendaction="clickrd";  
-    }            
-  }  
+      sendaction="clickrd";
+    }
+  }
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:sendaction,x:mx,y:my}
     }).done(getmouse);
 }
 
-function sendrclick(mx,my) {    
+function sendrclick(mx,my) {
   var sendaction="clickr";
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:sendaction,x:mx,y:my}
   }).done(getmouse);
 }
 
-function sendmousedown(mx,my) {    
+function sendmousedown(mx,my) {
   var sendaction="moused";
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:sendaction,x:mx,y:my}
   }).done(getmouse);
 }
@@ -96,8 +145,8 @@ function sendmousedown(mx,my) {
 function sendmousemove(mx,my) {
   var sendaction="mousem";
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:sendaction,x:mx,y:my}
   }).done(getmouse);
 }
@@ -105,48 +154,48 @@ function sendmousemove(mx,my) {
 function sendmouseup(mx,my) {
   var sendaction="mouseu";
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:sendaction,x:mx,y:my}
   }).done(getmouse);
 }
 
 function sendmute() {
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:"mute"}
   });
 }
 
 function sendvoldown() {
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:"voldown"}
   });
 }
 
 function sendvolup() {
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:"volup"}
   });
 }
 
 function sendtext(msg) {
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:"sendtext",text:msg}
   });
 }
 
 function sendbackspace() {
   $.ajax({
-    url: "/windows/receiveinput.php",
-    method: "POST",
+    url: "/receiveinput",
+    method: "GET",
     data: {action:"sendbackspace"}
   });
 }
@@ -169,13 +218,12 @@ function drawmouse() {
     var prevy=mousedposy;
     mousedposx=Math.round(homemousex*displaywidth/homescreenwidth);
     mousedposy=Math.round(homemousey*displayheight/homescreenheight);
-    //setmsg("home mouse: "+homemousex+","+homemousey+"<BR>display mouse: "+mousedposx+","+mousedposy+"<BR>"+homescreenwidth+"x"+homescreenheight+"<BR>"+displaywidth+"x"+displayheight+"<BR>"+$(".overlay")[0].width+"x"+$(".overlay")[0].height);
     if (prevx!==mousedposx || prevy!==mousedposy) {
       drawpointer(prevx,prevy);
     }
     if ($(".drawfps").prop("checked")) {
       drawfps();
-    } 
+    }
   }
   getmouse();
   setTimeout(drawmouse,mouserefresh);
@@ -209,6 +257,20 @@ function gotframe() {
   }
 }
 
+function checkifstalled() {
+  var newts = new Date().getTime();
+  if (newts-timestamp>timeout) {
+    timestamp=new Date().getTime();
+    redim();
+    if ($(".first").css("z-index")==="13") {
+      $(".second").attr("src","/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
+    } else {
+      $(".first").attr("src","/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
+    }
+  }
+  setTimeout(checkifstalled,timeout);
+}
+
 function calcdistance(x0,y0,x1,y1) {
   return Math.sqrt(Math.pow(Math.abs(x0-x1),2)+Math.pow(Math.abs(y0-y1),2));
 }
@@ -216,11 +278,12 @@ function calcdistance(x0,y0,x1,y1) {
 $(document).ready(function() {
   timestamp=new Date().getTime();
   redim();
-  $(".first").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
+  $(".first").attr("src","/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
   getserverscreensize();
   getmouse();
+  setTimeout(checkifstalled,timeout);
   setTimeout(drawmouse,mouserefresh);
-  
+
   /*
   var portrait=(window.innerWidth > window.innerHeight? false:true);
   window.onresize = function() {
@@ -236,10 +299,10 @@ $(document).ready(function() {
         body.appendChild(controls);
       } else {
         body.appendChild(controls);
-        body.appendChild(content);      
+        body.appendChild(content);
       }
-      portrait=currentorientation;    
-    }    
+      portrait=currentorientation;
+    }
   }
   */
   $(".first").on("load",function() {
@@ -265,7 +328,7 @@ $(document).ready(function() {
         drawpointer(mousedposx,mousedposy);
       }
       redim();
-      $(".second").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
+      $(".second").attr("src","/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
     },newts);
   });
   $(".second").on("load",function() {
@@ -291,7 +354,7 @@ $(document).ready(function() {
         drawpointer(mousedposx,mousedposy);
       }
       redim();
-      $(".first").attr("src","/windows/img/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
+      $(".first").attr("src","/screen.jpeg?w="+maxwidth+"&h="+maxheight+"&ts="+timestamp);
     },newts);
   });
   $(".overlay").on("contextmenu", function(e){
@@ -305,7 +368,7 @@ $(document).ready(function() {
     }
     e.preventDefault();
     return false;
-  });  
+  });
   $(".overlay")
   .mousedown(function(e) {
     if (e.which===1) {
@@ -341,7 +404,7 @@ $(document).ready(function() {
         lasty=hY;
         canceldrag=false;
         sendmousemove(hX,hY);
-      }    
+      }
     }
   })
   .mouseup(function(e) {
@@ -353,7 +416,7 @@ $(document).ready(function() {
       var X = (e.pageX - offset.left);
       var Y = (e.pageY - offset.top);
       var hX=Math.round(homescreenwidth * X / displaywidth);
-      var hY=Math.round(homescreenheight * Y / displayheight);  
+      var hY=Math.round(homescreenheight * Y / displayheight);
       if (wasDragging && !canceldrag) {
         sendmousemove(hX,hY);
         sendmouseup(hX,hY);
@@ -370,9 +433,9 @@ $(document).ready(function() {
     var X = (touches[touches.length-1].pageX - offset.left);
     var Y = (touches[touches.length-1].pageY - offset.top);
     var hX=Math.round(homescreenwidth * X / displaywidth);
-    var hY=Math.round(homescreenheight * Y / displayheight);  
+    var hY=Math.round(homescreenheight * Y / displayheight);
     startx=hX;
-    starty=hY;     
+    starty=hY;
   })
   .on("touchmove",function(e) {
     var touches = e.changedTouches;
@@ -380,17 +443,17 @@ $(document).ready(function() {
     var X = (touches[touches.length-1].pageX - offset.left);
     var Y = (touches[touches.length-1].pageY - offset.top);
     var hX=Math.round(homescreenwidth * X / displaywidth);
-    var hY=Math.round(homescreenheight * Y / displayheight);  
+    var hY=Math.round(homescreenheight * Y / displayheight);
     if (!isDragging) {
       isDragging = true;
       sendmousemove(hX,hY);
-      sendmousedown(startx,starty);    
+      sendmousedown(startx,starty);
     }
     if (calcdistance(hX,hY,lastx,lasty)>dragstep) {
       lastx=hX;
       lasty=hY;
       sendmousemove(hX,hY);
-    } 
+    }
   })
   .on("touchend",function(e) {
     var wasDragging = isDragging;
@@ -400,7 +463,7 @@ $(document).ready(function() {
     var X = (touches[touches.length-1].pageX - offset.left);
     var Y = (touches[touches.length-1].pageY - offset.top);
     var hX=Math.round(homescreenwidth * X / displaywidth);
-    var hY=Math.round(homescreenheight * Y / displayheight);  
+    var hY=Math.round(homescreenheight * Y / displayheight);
     if (wasDragging) {
       sendmousemove(hX,hY);
       sendmouseup(hX,hY);
@@ -413,9 +476,9 @@ $(document).ready(function() {
   $(".overlay").mouseout(function(e) {
     overcanvas=false;
   });
-  $(document).on("keypress",function(e) {    
+  $(document).on("keypress",function(e) {
     if (overcanvas) {
-      sendtext(String.fromCharCode(e.which));      
+      sendtext(String.fromCharCode(e.which));
       e.preventDefault();
       return false;
     }
@@ -445,4 +508,13 @@ $(document).ready(function() {
   $(".hidecontrols").click(function() {
     $(".controls").hide();
   });
+  $(".stopaudio").change(function() {
+    if ($(".stopaudio").prop("checked")) {
+      stopplay();
+    }
+    else {
+      startplay();
+    }
+  });
+  handleaudio();
 });
