@@ -38,6 +38,8 @@ Module Module1
         Public keepgoing As Boolean = True
         Dim sessions As List(Of usersession) = New List(Of usersession)
         Private memcache As MemoryStream = New MemoryStream()
+        Private Shared beforepreviousposition As Long = 0
+        Private Shared previousposition As Long = 0
         Private Shared currentposition As Long = 0
         Private Shared locksync As Object = New Object
         Private mp3header As Byte() = New Byte() {255, 251, 144, 4, 0, 15, 240, 0, 0, 105, 0, 0, 0, 8, 0, 0, 13, 32, 0, 0, 1, 0, 0, 1, 164, 0, 0, 0, 32, 0, 0, 52, 128, 0, 0, 4, 76, 65, 77, 69, 51, 46, 57, 57, 46, 49, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85, 85}
@@ -51,7 +53,7 @@ Module Module1
                 userid = _userid
                 position = 0
                 SyncLock locksync
-                    startpos = currentposition
+                    startpos = beforepreviousposition
                 End SyncLock
                 lastrequest = Now
             End Sub
@@ -92,6 +94,8 @@ Module Module1
                 Dim buffer As Byte() = _snd.readbytes()
                 If buffer.Length > 0 Then
                     SyncLock locksync
+                        beforepreviousposition = previousposition
+                        previousposition = currentposition
                         currentposition = memcache.Length
                         memcache.Write(buffer, 0, buffer.Length)
                     End SyncLock
@@ -158,6 +162,7 @@ Module Module1
                         mp3header.CopyTo(tmpbuffer, 0)
                         buffer.CopyTo(tmpbuffer, mp3header.Length)
                         response.StatusCode = 200
+                        response.KeepAlive = True
                         response.ContentType = "audio/mpeg"
                         response.AddHeader("Content-Disposition", "attachment; filename=""audio.mp3""")
                         outstream.Write(tmpbuffer, 0, tmpbuffer.Length)
@@ -166,7 +171,7 @@ Module Module1
                                                {"currentposition ", currentposition}, _
                                                {"user startpos", sessions.Item(user).startpos}, _
                                                {"BufferSize", memcache.Length}, _
-                                               {"data sent", tmpbuffer.Length}}, EventLogEntryType.Warning)
+                                               {"data sent", tmpbuffer.Length}}, EventLogEntryType.Information)
                     Else
                         Dim bytefroms As String = "NA"
                         Dim bytetos As String = "NA"
@@ -251,6 +256,7 @@ Module Module1
                         End If
                         If Not refuseranged Then
                             response.StatusCode = 206
+                            response.KeepAlive = True
                             response.StatusDescription = "Partial content"
                             response.AddHeader("Content-Type", "audio/mpeg")
                             response.AddHeader("Content-Range", "bytes " & bytefrom & "-" & (datalength + bytefrom - 1) & "/" & max)
@@ -424,7 +430,7 @@ Module Module1
             refresh.IsBackground = True
             refresh.Start()
             Try
-                Dim port As Integer = 81
+                Dim port As Integer = 80
                 Dim addresses As System.Net.IPAddress() = System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName())
                 For Each ip As System.Net.IPAddress In addresses
                     If ip.AddressFamily = AddressFamily.InterNetwork Then

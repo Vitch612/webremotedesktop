@@ -56,7 +56,7 @@ function getserverscreensize() {
 function startplay() {
   playaudio=true;
   $("#aplay")[0].load();
-  setTimeout(tryagain,500);
+  setTimeout(tryagain,2000);
 }
 
 function stopplay() {
@@ -73,7 +73,7 @@ function tryagain() {
       return;
   else
     aud.load();
-  setTimeout(tryagain,500);
+  setTimeout(tryagain,2000);
 }
 
 function playifnotplaying() {
@@ -82,21 +82,21 @@ function playifnotplaying() {
   }
   aud=$("#aplay")[0];
   if (!(aud.duration > 0 && !aud.paused))
-    aud.play();  
+    aud.play();
 }
 
 function handleaudio() {
   var aud = $("#aplay")[0];
   aud.load();
-  aud.volume=1;  
+  aud.volume=1;
   aud.onloadeddata  = function() {playifnotplaying();};
-  aud.onstalled = function() {aud.load();};
+  aud.onstalled = function() {alert("stalled");};
   aud.onerror = function() {aud.load();};
-  aud.onsuspend = function() {aud.load();};
+  //aud.onsuspend = function() {};
   aud.onended  = function() {aud.load();};
   aud.oncanplay = function() {playifnotplaying();};
-  aud.onabort = function() {aud.load();};
-  aud.onwaiting = function() {aud.load();};
+  //aud.onabort = function() {};
+  //aud.onwaiting = function() {};
   setTimeout(tryagain,2000);
 }
 
