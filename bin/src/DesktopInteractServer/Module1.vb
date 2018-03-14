@@ -417,7 +417,7 @@ Module Module1
                 Dim port As Integer = 81
                 Dim addresses As System.Net.IPAddress() = System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName())
                 For Each ip As System.Net.IPAddress In addresses
-                    If Not ip.AddressFamily.ToString().Equals("InterNetworkV6") Then
+                    If ip.AddressFamily = AddressFamily.InterNetwork Then
                         _httpListener.Prefixes.Add("http://" & ip.ToString() & ":" & port & "/")
                     End If
                 Next
