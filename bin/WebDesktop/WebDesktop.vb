@@ -32,6 +32,8 @@ Module WebDesktop
         Public keepgoing As Boolean = True
         Dim sessions As List(Of usersession) = New List(Of usersession)
         Private memcache As MemoryStream = New MemoryStream()
+        Private Shared beforebeforebeforepreviouspreviousposition As Long = 0
+        Private Shared beforebeforepreviouspreviousposition As Long = 0
         Private Shared beforepreviousposition As Long = 0
         Private Shared previousposition As Long = 0
         Private Shared currentposition As Long = 0
@@ -48,7 +50,7 @@ Module WebDesktop
                 userid = _userid
                 position = 0
                 SyncLock locksync
-                    startpos = beforepreviousposition
+                    startpos = beforebeforebeforepreviouspreviousposition
                 End SyncLock
                 lastrequest = Now
             End Sub
@@ -116,6 +118,8 @@ Module WebDesktop
                 Dim buffer As Byte() = _snd.readbytes()
                 If buffer.Length > 0 Then
                     SyncLock locksync
+                        beforebeforebeforepreviouspreviousposition = beforebeforepreviouspreviousposition
+                        beforebeforepreviouspreviousposition = beforepreviousposition
                         beforepreviousposition = previousposition
                         previousposition = currentposition
                         currentposition = memcache.Length
