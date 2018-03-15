@@ -11,6 +11,7 @@
 <body style="padding:0;margin:0;z-index:50;">
 <div class="message"></div>
 <div class="controls">
+  <img class="opensettings" src="/settings.png"/>
   <span class="formheader">Volume</span>
   <input class="btnmute formelement" type="button" value="&#128266;"><BR>
   <input class="btnvolup formelement" type="button" value="&#x25B2;"><BR>
@@ -30,7 +31,54 @@
 </div>
 <div class="content" style="padding:0;margin:0;text-align:center;">
   <div class="cvdiv">
-    <div class="settings"></div>
+    <div class="settings">
+    <img class="closesettings" src="/close.png"/>
+    <form action="/savesettings">
+    <div>
+      <div>
+      Audio Enabled
+      </div>
+      <div>
+      <input type="number" name="Audio" value="1"/>
+      </div>
+    </div>
+    <div>
+      <div>
+      Inactivity Timeout
+      </div>
+      <div>
+      <input type="number" name="Timeout" value="5"/>
+      </div>
+    </div>
+    <div>
+      <div>
+      Listening Port
+      </div>
+      <div>
+      <input type="number" name="Port" value="8888"/>
+      </div>
+    </div>
+    <div>
+      <div>
+      Screen Resolution
+      </div>
+      <div>
+      <input type="number" name="Resolution" value="80"/>
+      </div>
+    </div>
+    <div>
+      <div>
+      Application Log Level
+      </div>
+      <div>
+      <input type="number" name="LogLevel" value="1"/>
+      </div>
+    </div>
+    <div>
+      <input type="Button" name="Save"/>
+    </div>
+    </form>
+    </div>
     <canvas class="overlay"></canvas>
     <img id="mousepointer" src="/cursor.png" style="z-index:0;position:absolute;">
     <img class="first" src=""/><img class="second" src="">

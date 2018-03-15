@@ -1,0 +1,25 @@
+<html>
+<head>
+<script type="text/javascript" src="/jquery.min.js"></script>
+<script>
+
+function checkifonline() {
+  $.ajax({
+    url: "/receiveinput",
+    method: "GET",
+    data: {action:"getscreensize"}
+    }).done(function(data) {
+      window.location="/";
+    });
+  setTimeout(checkifonline,500);
+}
+
+$(document).ready(function() {
+  setTimeout(checkifonline,2500);
+});
+</script>
+</head>
+<body>
+Waiting for restart
+</body>
+</html>

@@ -25,18 +25,14 @@
   <textarea class="texttosend formelement"></textarea><BR>
   <input class="sendtext formelement" type="button" value="Send">&nbsp;&nbsp;<input class="sendback formelement" type="button" value="Backspace"><BR>
   <input class="drawfps formelement" type="checkbox">Show FPS<BR>
-  <input class="stopaudio formelement" type="checkbox">Stop Audio<BR>
   <input class="hidecontrols formelement" type="button" value="Hide">
 </div>
 <div class="content" style="padding:0;margin:0;text-align:center;">
   <div class="cvdiv">
-    <div class="settings"></div>
     <canvas class="overlay"></canvas>
     <img id="mousepointer" src="/cursor.png" style="z-index:0;position:absolute;">
     <img class="first" src=""/><img class="second" src="">
   </div>
 </div>
-<div class="mediadiv"><audio id="aplay" controls autoplay><source src="/audio.mp3" type="audio/mpeg">Your browser does not support the audio element.</audio></div>
-<div style="width:100%;height:50px;"></div>
 </body>
 </html>

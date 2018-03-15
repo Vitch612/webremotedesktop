@@ -10,12 +10,16 @@ body {
   font-size:14px;
   z-index:20;
 }
+.closesettings {
+  position:relative;
+  float:right;
+}
 .settings {
+  display:block;
   position: relative;
   margin: auto;
   top: 10%;
   width:75%;
-  display:none;
   height:70%;
   border-style:solid;
   border-color:black;
