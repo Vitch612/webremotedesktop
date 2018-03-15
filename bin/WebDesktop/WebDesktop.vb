@@ -18,8 +18,9 @@ Imports SoundCapture
 
 Module WebDesktop
     Private Class httpserver
-        Private idletime As Byte = 5
+        Private idletime As Byte = 10
         Private port As Integer = 8888
+        Private imageresolution As Integer = 80
         Private Shared loglevel As Byte = 2
         Private enableaudio = True
         Dim _snd As CoreAudio
@@ -144,7 +145,7 @@ Module WebDesktop
             If loglevel < 1 Then
                 Return
             End If
-            Dim appName As String = "DesktopInteractServer"
+            Dim appName As String = "WebDesktop"
             Dim eventData As EventSourceCreationData
             eventData = New EventSourceCreationData(appName, "Application")
             If Not EventLog.SourceExists(appName) Then
@@ -325,19 +326,10 @@ Module WebDesktop
                         End If
                         sessions.Item(user).lastrequest = Now
                     End If
-                ElseIf context.Request.RawUrl.Equals("/cursor.png") Or context.Request.RawUrl.Equals("/favicon.ico") Or context.Request.RawUrl.Equals("/jquery.min.js") Or context.Request.RawUrl.Equals("/styles.css") Or context.Request.RawUrl.Equals("/close.png") Or context.Request.RawUrl.Equals("/settings.png") Then
+                ElseIf context.Request.RawUrl.Equals("/cursor.png") Or context.Request.RawUrl.Equals("/favicon.ico") Or context.Request.RawUrl.Equals("/jquery.min.js") Or context.Request.RawUrl.Equals("/styles.css") Or context.Request.RawUrl.Equals("/close.png") Or context.Request.RawUrl.Equals("/settings.png") Or context.Request.RawUrl.Equals("/interactions.js") Or context.Request.RawUrl.Equals("/audio.js") Then
                     Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
                     filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "\files").Replace("\", "/")
                     Dim buffer As Byte() = File.ReadAllBytes(filePath & context.Request.RawUrl)
-                    outstream.Write(buffer, 0, buffer.Length)
-                ElseIf context.Request.RawUrl.Equals("/interactions.js") Then
-                    Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
-                    If enableaudio Then
-                        filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "\files").Replace("\", "/") & context.Request.RawUrl
-                    Else
-                        filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "\files").Replace("\", "/") & context.Request.RawUrl & "-noaudio"
-                    End If
-                    Dim buffer As Byte() = File.ReadAllBytes(filePath)
                     outstream.Write(buffer, 0, buffer.Length)
                 ElseIf context.Request.RawUrl.Equals("/") Then
                     Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
@@ -346,7 +338,17 @@ Module WebDesktop
                     Else
                         filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "/files/index.html-noaudio").Replace("\", "/")
                     End If
-                    Dim buffer As Byte() = File.ReadAllBytes(filePath)
+                    Dim index As String = File.ReadAllText(filePath)
+                    If enableaudio Then
+                        index = index.Replace("{audio}", "checked")
+                    Else
+                        index = index.Replace("{audio}", "")
+                    End If
+                    index = index.Replace("{timeout}", idletime)
+                    index = index.Replace("{port}", port)
+                    index = index.Replace("{resolution}", imageresolution)
+                    index = index.Replace("{loglevel}", loglevel)
+                    Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(index)
                     outstream.Write(buffer, 0, buffer.Length)
                 ElseIf context.Request.RawUrl.Equals("/exit") Then
                     response.Redirect("/")
@@ -359,7 +361,7 @@ Module WebDesktop
                     Dim buffer As Byte() = File.ReadAllBytes(filePath & "/restarting.html")
                     outstream.Write(buffer, 0, buffer.Length)
                     restart = True
-                    shutdown(1250)
+                    shutdown(100)
                 Else
                     Dim requesturl As String = context.Request.RawUrl
                     If requesturl.IndexOf("?") >= 0 Then
@@ -372,7 +374,7 @@ Module WebDesktop
                             Try
                                 w = Convert.ToInt32(context.Request.QueryString.Item("w"))
                                 h = Convert.ToInt32(context.Request.QueryString.Item("h"))
-                                Dim buffer As Byte() = Functionality.getScreenshot(w, h, 80)
+                                Dim buffer As Byte() = Functionality.getScreenshot(w, h, imageresolution)
                                 outstream.Write(buffer, 0, buffer.Length)
                             Catch ex As Exception
                                 Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
@@ -387,102 +389,137 @@ Module WebDesktop
                             outstream.Write(buffer, 0, buffer.Length)
                         End If
                     ElseIf requesturl.Equals("/savesettings") Then
-
+                        Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
+                        filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "/files/config.ini").Replace("\", "/")
+                        Try
+                            Dim saved As Boolean() = New Boolean(context.Request.QueryString.Count - 1) {}
+                            For i As Integer = 0 To saved.Length - 1
+                                saved(i) = False
+                            Next
+                            Dim config As String() = File.ReadAllLines(filePath)
+                            For l As Integer = 0 To config.Length - 1
+                                For i As Integer = 0 To context.Request.QueryString.Count - 1
+                                    If config(l).IndexOf(context.Request.QueryString.Keys.Item(i)) <> -1 Then
+                                        saved(i) = True
+                                        If context.Request.QueryString.Keys.Item(i).Equals("Audio") Then
+                                            config(l) = config(l).Substring(0, config(l).IndexOf("=") + 1) & If(context.Request.QueryString.Item(i).ToLower().Equals("true"), 1, 0)
+                                        Else
+                                            config(l) = config(l).Substring(0, config(l).IndexOf("=") + 1) & context.Request.QueryString.Item(i)
+                                        End If
+                                    End If
+                                Next
+                            Next
+                            For i As Integer = 0 To saved.Length - 1
+                                If Not saved(i) Then
+                                    Array.Resize(config, config.Length + 1)
+                                    config(config.Length - 1) = context.Request.QueryString.Keys.Item(i) & "=" & context.Request.QueryString.Item(i)
+                                End If
+                            Next
+                            Dim newconfig As String = ""
+                            For l As Integer = 0 To config.Length - 1
+                                newconfig &= config(l) & Environment.NewLine
+                            Next
+                            Dim configfile As System.IO.FileStream = File.Create(filePath)
+                            Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(newconfig)
+                            configfile.Write(buffer, 0, buffer.Length)
+                        Catch ex As Exception
+                            log("[SaveConfig]" & Environment.NewLine & ex.Message & Environment.NewLine & ex.Source & Environment.NewLine & ex.StackTrace, EventLogEntryType.Error)
+                        End Try
                     ElseIf requesturl.Equals("/receiveinput") Then
-                        If Not context.Request.QueryString.Item("action") Is Nothing Then
-                            Select Case context.Request.QueryString.Item("action")
-                                Case "getscreensize"
-                                    Dim retval As Integer() = Functionality.getscreen_resolution()
-                                    Dim reply As String = retval(0) & "," & retval(1)
-                                    Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(reply)
-                                    outstream.Write(buffer, 0, buffer.Length)
-                                Case "getmouse"
-                                    Dim retval As Integer() = Functionality.getmousepos()
-                                    Dim reply As String = retval(0) & "," & retval(1)
-                                    Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(reply)
-                                    outstream.Write(buffer, 0, buffer.Length)
-                                Case "sendtext"
-                                    If Not context.Request.QueryString.Item("text") Is Nothing Then
-                                        Functionality.sendText(context.Request.QueryString.Item("text"))
-                                    End If
-                                Case "click"
-                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
-                                        Try
-                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
-                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
-                                            Functionality.mouseclickl(x, y)
-                                        Catch ex As Exception
-                                        End Try
-                                    End If
-                                Case "clickr"
-                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
-                                        Try
-                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
-                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
-                                            Functionality.mouseclickr(x, y)
-                                        Catch ex As Exception
-                                        End Try
-                                    End If
-                                Case "clickd"
-                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
-                                        Try
-                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
-                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
-                                            Functionality.mousedblclickl(x, y)
-                                        Catch ex As Exception
-                                        End Try
-                                    End If
-                                Case "clickrd"
-                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
-                                        Try
-                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
-                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
-                                            Functionality.mousedblclickr(x, y)
-                                        Catch ex As Exception
-                                        End Try
-                                    End If
-                                Case "mute"
-                                    Functionality.mute()
-                                Case "voldown"
-                                    Functionality.volumedown()
-                                Case "volup"
-                                    Functionality.volumeup()
-                                Case "moused"
-                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
-                                        Try
-                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
-                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
-                                            Functionality.mousemove(x, y)
-                                            Functionality.mousedown()
-                                        Catch ex As Exception
-                                        End Try
-                                    End If
-                                Case "mouseu"
-                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
-                                        Try
-                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
-                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
-                                            Functionality.mousemove(x, y)
-                                            Functionality.mouseup()
-                                        Catch ex As Exception
-                                        End Try
-                                    End If
-                                Case "mousem"
-                                    If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
-                                        Try
-                                            Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
-                                            Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
-                                            Functionality.mousemove(x, y)
-                                        Catch ex As Exception
-                                        End Try
-                                    End If
-                                Case "sendbackspace"
-                                    Functionality.sendKey(8)
-                            End Select
-                        End If
+                            If Not context.Request.QueryString.Item("action") Is Nothing Then
+                                Select Case context.Request.QueryString.Item("action")
+                                    Case "getscreensize"
+                                        Dim retval As Integer() = Functionality.getscreen_resolution()
+                                        Dim reply As String = retval(0) & "," & retval(1)
+                                        Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(reply)
+                                        outstream.Write(buffer, 0, buffer.Length)
+                                    Case "getmouse"
+                                        Dim retval As Integer() = Functionality.getmousepos()
+                                        Dim reply As String = retval(0) & "," & retval(1)
+                                        Dim buffer As Byte() = System.Text.Encoding.UTF8.GetBytes(reply)
+                                        outstream.Write(buffer, 0, buffer.Length)
+                                    Case "sendtext"
+                                        If Not context.Request.QueryString.Item("text") Is Nothing Then
+                                            Functionality.sendText(context.Request.QueryString.Item("text"))
+                                        End If
+                                    Case "click"
+                                        If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                            Try
+                                                Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                                Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                                Functionality.mouseclickl(x, y)
+                                            Catch ex As Exception
+                                            End Try
+                                        End If
+                                    Case "clickr"
+                                        If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                            Try
+                                                Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                                Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                                Functionality.mouseclickr(x, y)
+                                            Catch ex As Exception
+                                            End Try
+                                        End If
+                                    Case "clickd"
+                                        If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                            Try
+                                                Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                                Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                                Functionality.mousedblclickl(x, y)
+                                            Catch ex As Exception
+                                            End Try
+                                        End If
+                                    Case "clickrd"
+                                        If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                            Try
+                                                Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                                Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                                Functionality.mousedblclickr(x, y)
+                                            Catch ex As Exception
+                                            End Try
+                                        End If
+                                    Case "mute"
+                                        Functionality.mute()
+                                    Case "voldown"
+                                        Functionality.volumedown()
+                                    Case "volup"
+                                        Functionality.volumeup()
+                                    Case "moused"
+                                        If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                            Try
+                                                Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                                Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                                Functionality.mousemove(x, y)
+                                                Functionality.mousedown()
+                                            Catch ex As Exception
+                                            End Try
+                                        End If
+                                    Case "mouseu"
+                                        If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                            Try
+                                                Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                                Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                                Functionality.mousemove(x, y)
+                                                Functionality.mouseup()
+                                            Catch ex As Exception
+                                            End Try
+                                        End If
+                                    Case "mousem"
+                                        If Not context.Request.QueryString.Item("x") Is Nothing And Not context.Request.QueryString.Item("y") Is Nothing Then
+                                            Try
+                                                Dim x As Integer = Convert.ToInt32(context.Request.QueryString.Item("x"))
+                                                Dim y As Integer = Convert.ToInt32(context.Request.QueryString.Item("y"))
+                                                Functionality.mousemove(x, y)
+                                            Catch ex As Exception
+                                            End Try
+                                        End If
+                                    Case "sendbackspace"
+                                        Functionality.sendKey(8)
+                                End Select
+                            End If
                     Else
-                        response.StatusCode = 404
-                        response.StatusDescription = "File Not Found"
+                            response.StatusCode = 404
+                            response.StatusDescription = "File Not Found"
                     End If
                 End If
                 outstream.Flush()
@@ -547,6 +584,11 @@ Module WebDesktop
                             Case "LogLevel"
                                 Try
                                     loglevel = Convert.ToInt32(parts(1).Trim())
+                                Catch ex As Exception
+                                End Try
+                            Case "Resolution"
+                                Try
+                                    imageresolution = Convert.ToInt32(parts(1).Trim())
                                 Catch ex As Exception
                                 End Try
                         End Select

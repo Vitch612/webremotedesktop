@@ -8,11 +8,11 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("DesktopInteractServer")> 
-<Assembly: AssemblyDescription("")> 
+<Assembly: AssemblyTitle("WebDesktop")> 
+<Assembly: AssemblyDescription("Web based VNC server")> 
 <Assembly: AssemblyCompany("")> 
-<Assembly: AssemblyProduct("DesktopInteractServer")> 
-<Assembly: AssemblyCopyright("Copyright ©  2018")> 
+<Assembly: AssemblyProduct("")> 
+<Assembly: AssemblyCopyright("")> 
 <Assembly: AssemblyTrademark("")> 
 
 <Assembly: ComVisible(False)>

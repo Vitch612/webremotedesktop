@@ -5,13 +5,16 @@
   <link rel="stylesheet" type="text/css" href="/styles.css">
   <script type="text/javascript" src="/jquery.min.js"></script>
   <script type="text/javascript" src="/interactions.js"></script>
+  <script type="text/javascript" src="/audio.js"></script>
 <script>
 </script>
 </head>
 <body style="padding:0;margin:0;z-index:50;">
 <div class="message"></div>
 <div class="controls">
+  <div class="settingsbutton">
   <img class="opensettings" src="/settings.png"/>
+  </div>
   <span class="formheader">Volume</span>
   <input class="btnmute formelement" type="button" value="&#128266;"><BR>
   <input class="btnvolup formelement" type="button" value="&#x25B2;"><BR>
@@ -33,49 +36,47 @@
   <div class="cvdiv">
     <div class="settings">
     <img class="closesettings" src="/close.png"/>
-    <form action="/savesettings">
-    <div>
-      <div>
+    <form name="savesettings" action="/savesettings" method="GET">
+    <div class="inputrow">
+    <div class="inputcol1">
+      <div class="inputlabel">
       Audio Enabled
       </div>
-      <div>
-      <input type="number" name="Audio" value="1"/>
-      </div>
-    </div>
-    <div>
-      <div>
+      <div class="inputlabel">
       Inactivity Timeout
       </div>
-      <div>
-      <input type="number" name="Timeout" value="5"/>
-      </div>
-    </div>
-    <div>
-      <div>
+      <div class="inputlabel">
       Listening Port
       </div>
-      <div>
-      <input type="number" name="Port" value="8888"/>
-      </div>
-    </div>
-    <div>
-      <div>
+      <div class="inputlabel">
       Screen Resolution
       </div>
-      <div>
-      <input type="number" name="Resolution" value="80"/>
-      </div>
-    </div>
-    <div>
-      <div>
+      <div class="inputlabel">
       Application Log Level
       </div>
-      <div>
-      <input type="number" name="LogLevel" value="1"/>
+    </div>
+    <div class="inputcol2">
+      <div class="inputfield">
+      <input class="inputchk" type="checkbox" name="Audio" {audio}/>
+      </div>
+      <div class="inputfield">
+      <input class="input" type="number" name="Timeout" value="{timeout}" min="0" step="1" pattern="\d+"/>
+      </div>
+      <div class="inputfield">
+      <input class="input" type="number" name="Port" value="{port}" min="50" max="65535" step="1" pattern="\d+"/>
+      </div>
+      <div class="inputfield">
+      <input class="input" type="number" name="Resolution" value="{resolution}" min="0" max="100" step="1" pattern="\d+"/>
+      </div>
+      <div class="inputfield">
+      <input class="input" type="number" name="LogLevel" value="{loglevel}" min="0" max="2" step="1" pattern="\d+"/>
       </div>
     </div>
-    <div>
-      <input type="Button" name="Save"/>
+    </div>
+    <div class="inputrow">
+      <input type="Button" value="Save" name="Save"/>
+      <input type="Button" value="Restart" name="Restart"/>
+      <input type="Button" value="Shutdown" name="Shutdown"/>
     </div>
     </form>
     </div>

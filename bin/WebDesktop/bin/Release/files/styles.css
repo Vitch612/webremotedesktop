@@ -1,26 +1,15 @@
 body {
   background-color:black;
 }
-.controls {
-  position:absolute;
-  padding-left:5px;
-  width:100px;
-  color:lightgrey;
-  background-color:#202020;
-  font-size:14px;
-  z-index:20;
-}
-.closesettings {
-  position:relative;
-  float:right;
-}
 .settings {
-  display:block;
+  display:none;
   position: relative;
   margin: auto;
   top: 10%;
-  width:75%;
+  width:75%;  
   height:70%;
+  min-width:265px;
+  min-height:265px;
   border-style:solid;
   border-color:black;
   border-width:1px;
@@ -28,6 +17,70 @@ body {
   -moz-box-shadow: 0px 2px 2px 2px rgba(0,0,0,0.35);
   box-shadow: 0px 2px 2px 2px rgba(0,0,0,0.35);
   background-color:white;
+  z-index:20;
+}
+.inputrow {
+  margin-top:40px;
+}
+.inputcol1 {
+  width:50%;
+  margin-top:40px;
+  text-align:right;
+}
+.inputcol2 {
+  position:absolute;
+  right:0;
+  top:0;
+  margin-top:40px;
+  width:50%;
+  text-align:left;
+}
+.inputlabel{  
+  margin:0px;
+  padding:0px;
+  height:30px;
+  vertical-align: text-bottom;
+  margin-right:10px;
+}
+.inputfield{
+  margin:0px;
+  padding:0px;
+  height:30px;
+  vertical-align: text-bottom;
+}
+.inputchk {
+  margin-top:5px;
+}
+.inputrow input {
+  margin-left:20px;
+}
+.input {
+  width:50%;
+  margin-top:1px;
+  padding-left:5px;
+  border-style:solid;
+  border-color:grey;
+  border-width:1px;
+}
+.opensettings {
+  margin-top:10px;
+  width:35px;
+  height:35px;
+}
+.closesettings {
+  position:absolute;
+  top:0;
+  right:0;
+  margin-right:5px;
+  margin-top:5px;
+}
+.controls {
+  position:absolute;
+  padding-left:5px;
+  width:100px;
+  color:lightgrey;
+  background-color:#202020;
+  font-size:14px;
   z-index:20;
 }
 .message {
@@ -94,4 +147,7 @@ body {
 }
 .texttosend {
   width:90px;
+}
+.settingsbutton {
+  text-align:center;
 }

@@ -25,7 +25,6 @@ var starty=0;
 var lastx=0;
 var lasty=0;
 var mdown=false;
-var playaudio=true;
 
 function getmouse() {
   var sendaction="getmouse";
@@ -51,53 +50,6 @@ function getserverscreensize() {
         homescreenwidth=Number(pos[0]);
         homescreenheight=Number(pos[1]);
     });
-}
-
-function startplay() {
-  playaudio=true;
-  $("#aplay")[0].load();
-  setTimeout(tryagain,2000);
-}
-
-function stopplay() {
-  playaudio=false;
-  $("#aplay")[0].pause();
-}
-
-function tryagain() {
-  if (!playaudio || $(".stopaudio").prop("checked")) {
-    return;
-  }
-  var aud = $("#aplay")[0];
-  if (aud.duration > 0 && !aud.paused)
-      return;
-  else
-    aud.load();
-  setTimeout(tryagain,2000);
-}
-
-function playifnotplaying() {
-  if (!playaudio || $(".stopaudio").prop("checked")) {
-    return;
-  }
-  aud=$("#aplay")[0];
-  if (!(aud.duration > 0 && !aud.paused))
-    aud.play();
-}
-
-function handleaudio() {
-  var aud = $("#aplay")[0];
-  aud.load();
-  aud.volume=1;
-  aud.onloadeddata  = function() {playifnotplaying();};
-  aud.onstalled = function() {alert("stalled");};
-  aud.onerror = function() {aud.load();};
-  //aud.onsuspend = function() {};
-  aud.onended  = function() {aud.load();};
-  aud.oncanplay = function() {playifnotplaying();};
-  //aud.onabort = function() {};
-  //aud.onwaiting = function() {};
-  setTimeout(tryagain,2000);
 }
 
 function sendclick(mx,my) {
@@ -508,13 +460,36 @@ $(document).ready(function() {
   $(".hidecontrols").click(function() {
     $(".controls").hide();
   });
-  $(".stopaudio").change(function() {
-    if ($(".stopaudio").prop("checked")) {
-      stopplay();
-    }
-    else {
-      startplay();
+  $(".closesettings").click(function() {
+	$(".settings").hide();
+  });
+  $(".opensettings").click(function() {
+	if ($(".settings").is(":visible"))
+	  $(".settings").hide();
+	else
+	  $(".settings").show();
+  });
+  $("input[name='Save']").click(function() {
+    var settingsform = $("form[name='savesettings']")[0]
+    $.ajax({
+	  url: "/savesettings",
+	  method: "GET",
+	  data: {
+		  Audio:settingsform.elements["Audio"].checked,
+		  Timeout:settingsform.elements["Timeout"].value,
+		  Resolution:settingsform.elements["Resolution"].value,
+		  LogLevel:settingsform.elements["LogLevel"].value,
+		  Port:settingsform.elements["Port"].value
+	  }
+	});
+	$(".settings").hide();
+  });
+  $("input[name='Restart']").click(function() {
+    window.location="/restart";
+  });
+  $("input[name='Shutdown']").click(function() {
+    if (confirm("Are you sure you want to stop the server?")) {
+      window.location="/exit";
     }
   });
-  handleaudio();
 });
