@@ -9,7 +9,8 @@
     </SchemaVersion>
     <ProjectGuid>{AB402F46-766D-48B1-A272-F0E04CEBFC61}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <StartupObject>WebDesktop.WebDesktop</StartupObject>
+    <StartupObject>
+    </StartupObject>
     <RootNamespace>WebDesktop</RootNamespace>
     <AssemblyName>WebDesktop</AssemblyName>
     <FileAlignment>512</FileAlignment>

@@ -1,6 +1,5 @@
 var refreshrate=0;
 var timeout=1000;
-var mouserefresh=50;
 var maxwidth;
 var maxheight;
 var displaywidth;
@@ -24,6 +23,7 @@ var startx=0;
 var starty=0;
 var lastx=0;
 var lasty=0;
+mousegetrate = 50;
 var mdown=false;
 
 function getmouse() {
@@ -34,8 +34,9 @@ function getmouse() {
     data: {action:sendaction}
     }).done(function(data) {
         var pos=data.split(",");
-        homemousex=pos[0];
-        homemousey=pos[1];
+        homemousex=Number(pos[0]);
+        homemousey=Number(pos[1]);
+        drawmouse();
     });
 }
 
@@ -164,6 +165,11 @@ function drawpointer(prevx,prevy) {
   ctx.drawImage(img,mousedposx,mousedposy);
 }
 
+function mouserefresh() {
+  setTimeout(mouserefresh,mousegetrate);
+  getmouse();
+}
+
 function drawmouse() {
   if (displaywidth!==null && homemousex!==null) {
     var prevx=mousedposx;
@@ -177,8 +183,6 @@ function drawmouse() {
       drawfps();
     }
   }
-  getmouse();
-  setTimeout(drawmouse,mouserefresh);
 }
 
 function redim() {
@@ -234,7 +238,7 @@ $(document).ready(function() {
   getserverscreensize();
   getmouse();
   setTimeout(checkifstalled,timeout);
-  setTimeout(drawmouse,mouserefresh);
+  setTimeout(mouserefresh,mousegetrate);
 
   /*
   var portrait=(window.innerWidth > window.innerHeight? false:true);

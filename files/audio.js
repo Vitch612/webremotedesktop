@@ -4,7 +4,7 @@ var playaudio=true;
 function startplay() {
   playaudio=true;
   $("#aplay")[0].load();
-  setTimeout(tryagain,2000);
+  setTimeout(tryagain,500);
 }
 
 function stopplay() {
@@ -21,7 +21,7 @@ function tryagain() {
       return;
   else
     aud.load();
-  setTimeout(tryagain,2000);
+  setTimeout(tryagain,500);
 }
 
 function playifnotplaying() {
@@ -45,7 +45,7 @@ function handleaudio() {
   aud.oncanplay = function() {playifnotplaying();};
   //aud.onabort = function() {};
   //aud.onwaiting = function() {};
-  setTimeout(tryagain,2000);
+  setTimeout(tryagain,500);
 }
 
 $(document).ready(function() {
