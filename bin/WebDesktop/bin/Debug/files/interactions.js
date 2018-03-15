@@ -483,7 +483,8 @@ $(document).ready(function() {
 		  Timeout:settingsform.elements["Timeout"].value,
 		  Resolution:settingsform.elements["Resolution"].value,
 		  LogLevel:settingsform.elements["LogLevel"].value,
-		  Port:settingsform.elements["Port"].value
+		  Port:settingsform.elements["Port"].value,
+		  Buffering:settingsform.elements["Buffering"].value
 	  }
 	});
 	$(".settings").hide();

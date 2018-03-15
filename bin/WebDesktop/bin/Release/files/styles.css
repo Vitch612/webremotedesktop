@@ -1,6 +1,9 @@
 body {
   background-color:black;
 }
+.mediadiv {
+  visibility:hidden;
+}
 .settings {
   display:none;
   position: relative;

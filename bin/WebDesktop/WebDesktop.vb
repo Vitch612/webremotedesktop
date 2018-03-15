@@ -22,7 +22,7 @@ Module WebDesktop
         Private port As Integer = 8888
         Private imageresolution As Integer = 80
         Private Shared loglevel As Byte = 2
-        Dim bufferingtime As UShort = 500
+        Dim bufferingtime As UShort = 1000
         Private enableaudio = True
         Dim _snd As CoreAudio
         Private timer As DateTime
@@ -454,6 +454,7 @@ Module WebDesktop
                     index = index.Replace("{port}", port)
                     index = index.Replace("{resolution}", imageresolution)
                     index = index.Replace("{loglevel}", loglevel)
+                    index = index.Replace("{buffering}", bufferingtime)
                     Dim buffer As Byte() = System.Text.Encoding.ASCII.GetBytes(index)
                     response.StatusCode = 200
                     response.StatusDescription = "OK"
@@ -741,6 +742,11 @@ Module WebDesktop
                             Case "Resolution"
                                 Try
                                     imageresolution = Convert.ToInt32(parts(1).Trim())
+                                Catch ex As Exception
+                                End Try
+                            Case "Buffering"
+                                Try
+                                    bufferingtime = Convert.ToInt32(parts(1).Trim())
                                 Catch ex As Exception
                                 End Try
                         End Select

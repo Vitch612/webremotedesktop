@@ -37,6 +37,7 @@ function handleaudio() {
   var aud = $("#aplay")[0];
   aud.load();
   aud.volume=1;
+  aud.controls = false;
   aud.onloadeddata  = function() {playifnotplaying();};
   aud.onstalled = function() {alert("stalled");};
   aud.onerror = function() {aud.load();};
@@ -57,5 +58,5 @@ $(document).ready(function() {
       startplay();
     }
   });
-  handleaudio();
+  setTimeout(handleaudio,250);
 });
