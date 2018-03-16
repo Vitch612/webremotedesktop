@@ -1,10 +1,16 @@
 var playaudio=true;
 
+function setmsg(text) {
+  $(".message").html(text);
+}
+
+function addmsg(text) {
+  $(".message").html($(".message").html()+" "+text);
+}
 
 function startplay() {
   playaudio=true;
-  $("#aplay")[0].load();
-  setTimeout(tryagain,500);
+  $("#aplay")[0].play();
 }
 
 function stopplay() {
@@ -12,41 +18,80 @@ function stopplay() {
   $("#aplay")[0].pause();
 }
 
-function tryagain() {
-  if (!playaudio || $(".stopaudio").prop("checked")) {
-    return;
-  }
-  var aud = $("#aplay")[0];
-  if (aud.duration > 0 && !aud.paused)
-      return;
-  else
-    aud.load();
-  setTimeout(tryagain,500);
+function currentbufferend() {
+  $.ajax({
+    url: "/resetposition",
+    method: "GET",
+    data: {}
+  }).done(function(data) {
+    $("#aplay")[0].src="/audio.mp3?"+data;
+    $("#aplay")[0].load();
+  });
 }
 
-function playifnotplaying() {
+function tryload() {
+  if (!playaudio || $(".stopaudio").prop("checked") || !$("#aplay")[0].paused) {
+    return;
+  }
+  $("#aplay")[0].load();
+  addmsg("tryload("+$("#aplay")[0].readyState+")");
+  setTimeout(tryload,500);
+}
+
+function checkifplaying() {
+  if ($("#aplay")[0].paused)
+    $("#aplay")[0].play();
+  else
+    tryload();
+}
+
+function tryplay() {
   if (!playaudio || $(".stopaudio").prop("checked")) {
     return;
   }
-  aud=$("#aplay")[0];
-  if (!(aud.duration > 0 && !aud.paused))
-    aud.play();
+  addmsg("tryplay("+$("#aplay")[0].readyState+")");
+  $("#aplay")[0].play();
+  setTimeout(checkifplaying,10);
 }
 
 function handleaudio() {
   var aud = $("#aplay")[0];
-  aud.load();
+  addmsg("source("+aud.currentSrc+")");
+  tryload();
   aud.volume=1;
-  aud.controls = false;
-  aud.onloadeddata  = function() {playifnotplaying();};
-  aud.onstalled = function() {alert("stalled");};
-  aud.onerror = function() {aud.load();};
-  //aud.onsuspend = function() {};
-  aud.onended  = function() {aud.load();};
-  aud.oncanplay = function() {playifnotplaying();};
-  //aud.onabort = function() {};
-  //aud.onwaiting = function() {};
-  setTimeout(tryagain,500);
+  aud.controls = true;
+  aud.oncanplay = function() {
+    tryplay();
+  };
+  aud.onabort = function() {
+    addmsg("abort("+$("#aplay")[0].readyState+")");
+  };
+  aud.onerror = function() {
+    addmsg("error("+$("#aplay")[0].readyState+")="+$("#aplay")[0].error.code);
+    currentbufferend();
+  };
+  aud.onsuspend = function() {
+    addmsg("suspend("+$("#aplay")[0].readyState+")");
+  };
+  aud.onloadeddata  = function() {
+    addmsg("loadeddata("+$("#aplay")[0].readyState+")");;
+  };
+  aud.onstalled = function() {
+    addmsg("stalled("+$("#aplay")[0].readyState+")");
+  };
+  aud.onended  = function() {
+    addmsg("ended("+$("#aplay")[0].readyState+")");
+    currentbufferend();
+  };
+  aud.onloadstart = function() {
+    addmsg("loadstart("+$("#aplay")[0].readyState+")");
+  };
+  aud.onwaiting = function() {
+    addmsg("waiting("+$("#aplay")[0].readyState+")");
+  };
+  aud.onprogress= function() {
+    //addmsg("progress("+$("#aplay")[0].readyState+")");
+  };
 }
 
 $(document).ready(function() {
@@ -58,5 +103,5 @@ $(document).ready(function() {
       startplay();
     }
   });
-  setTimeout(handleaudio,250);
+  handleaudio();
 });

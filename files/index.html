@@ -1,7 +1,9 @@
-<html>
+<!DOCTYPE html>
 <head>
   <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1">
-  <meta http-equiv="Cache-Control" content="no-store" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
   <link rel="stylesheet" type="text/css" href="/styles.css">
   <script type="text/javascript" src="/jquery.min.js"></script>
@@ -11,7 +13,6 @@
 </script>
 </head>
 <body style="padding:0;margin:0;z-index:50;">
-<div class="message"></div>
 <div class="controls">
   <div class="settingsbutton">
   <img class="opensettings" src="/settings.png"/>
@@ -92,6 +93,7 @@
     <img class="first" src=""/><img class="second" src="">
   </div>
 </div>
-<div class="mediadiv"><audio id="aplay" preload="none"><source src="/audio.mp3" type="audio/mpeg">Your browser does not support the audio element.</audio></div>
+<div class="message"></div>
+<div class="mediadiv"><audio id="aplay"><source src="/audio.mp3?{randomstring}" type="audio/mpeg">Your browser does not support the audio element.</audio></div>
 </body>
 </html>

@@ -153,10 +153,6 @@ function sendbackspace() {
   });
 }
 
-function setmsg(text) {
-  $(".message").html(text);
-}
-
 function drawpointer(prevx,prevy) {
   var c = $(".overlay")[0];
   var ctx = c.getContext("2d");

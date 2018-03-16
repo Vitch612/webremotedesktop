@@ -50,14 +50,14 @@ Module WebDesktop
         Private Class usersession
             Public userid As String
             Public lastrequest As DateTime
-            Public position As Long
             Public startpos As Long
+            Public lastpos As Long
             Public Sub New(ByVal _userid As String, ByVal startingpos As Long)
                 userid = _userid
-                position = 0
                 SyncLock locksync
                     startpos = startingpos
                 End SyncLock
+                lastpos = startpos
                 lastrequest = Now
             End Sub
         End Class
@@ -225,6 +225,17 @@ Module WebDesktop
             log(msg, EventLogEntryType.Information)
         End Sub
 
+        Private Function getrandomstring() As String
+            Dim s As String = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+            Dim r As New Random
+            Dim sb As New StringBuilder
+            For i As Integer = 1 To 8
+                Dim idx As Integer = r.Next(0, 35)
+                sb.Append(s.Substring(idx, 1))
+            Next
+            Return sb.ToString()
+        End Function
+
         Private Function getmimetype(ByVal filename As String) As String
             Try
                 Select Case filename.Substring(filename.LastIndexOf("."))
@@ -264,9 +275,191 @@ Module WebDesktop
             Return "application/octet-stream"
         End Function
 
+        Private Function serveaudio(ByRef response As HttpListenerResponse, ByRef outstream As Stream, ByRef context As HttpListenerContext, ByVal user As Integer) As Boolean
+            Dim max As Long = 9223372036854775807
+            Dim keys As String() = context.Request.Headers.AllKeys
+            Dim sreport As String(,) = New String(keys.Length, 1) {}
+            sreport(0, 0) = "[HTTP Request Headers]"
+            sreport(0, 1) = ""
+            For i As Integer = 0 To keys.Length - 1
+                sreport(i + 1, 0) = keys(i)
+                sreport(i + 1, 1) = context.Request.Headers.Item(keys(i))
+            Next
+            loginfo(sreport)
+            If sessions.Item(user).startpos = 0 Then
+                sessions.Item(user).startpos = getstartingposition()
+            End If
+            If sessions.Item(user).startpos = 0 Then
+                response.StatusCode = 503
+                response.StatusDescription = "Service Unavailable"
+                'response.AddHeader("Retry-After", "1")
+                'loginfo(New String(,) {{"Request Refused 503", ""}, _
+                '                       {"User Stream Start", sessions.Item(user).startpos}, _
+                '                       {"Cache Length", memcache.Length}})
+            Else
+                Dim reqrange As String = context.Request.Headers.Item("Range")
+                Dim reqaccept As String = context.Request.Headers.Item("Accept")
+                If reqrange Is Nothing And reqaccept Is Nothing Then
+                    Dim buffer As Byte() = getbuffer(sessions.Item(user).startpos, memcache.Length)
+                    Dim tmpbuffer As Byte() = New Byte(buffer.Length + mp3header.Length - 1) {}
+                    mp3header.CopyTo(tmpbuffer, 0)
+                    buffer.CopyTo(tmpbuffer, mp3header.Length)
+                    response.StatusCode = 200
+                    response.StatusDescription = "OK"
+                    response.KeepAlive = True
+                    response.ContentType = "audio/mpeg"
+                    'response.AddHeader("Content-Disposition", "attachment; filename=""audio.mp3""")
+                    sessions.Item(user).lastpos = sessions.Item(user).startpos + buffer.Length
+                    outstream.Write(tmpbuffer, 0, tmpbuffer.Length)
+                    loginfo(New String(,) {{"Normal Response", ""}, _
+                                           {"userid ", user}, _
+                                           {"readfrom", sessions.Item(user).startpos}, _
+                                           {"bytesread", buffer.Length}, _
+                                           {"currentbuffer", memcache.Length}, _
+                                           {"lastpos", sessions.Item(user).lastpos}}, EventLogEntryType.Information)
+                Else
+                    Dim bytefroms As String = "NA"
+                    Dim bytetos As String = "NA"
+                    Dim bytefrom As Long = 0
+                    Dim byteto As Long = 0
+                    Dim refuseranged As Boolean = False
+                    Dim requestedbytes As Long = -1
+                    If Not reqrange Is Nothing Then
+                        If reqrange.IndexOf("-") <> -1 Then
+                            bytefroms = reqrange.Substring(reqrange.IndexOf("=") + 1, reqrange.IndexOf("-") - reqrange.IndexOf("=") - 1)
+                        End If
+                        If bytefroms = "NA" Then
+                            bytefrom = -1
+                            refuseranged = True
+                        Else
+                            Try
+                                bytefrom = Convert.ToInt64(bytefroms)
+                            Catch ex As Exception
+                                bytefrom = -1
+                                refuseranged = True
+                            End Try
+                        End If
+                        If reqrange.IndexOf("/") <> -1 Then
+                            bytetos = reqrange.Substring(reqrange.LastIndexOf("-") + 1, reqrange.IndexOf("/") - reqrange.LastIndexOf("-") - 1)
+                        Else
+                            bytetos = reqrange.Substring(reqrange.LastIndexOf("-") + 1)
+                        End If
+                        If bytetos = "NA" Then
+                            byteto = -1
+                        Else
+                            Try
+                                byteto = Convert.ToInt64(bytetos)
+                            Catch ex As Exception
+                                byteto = -1
+                            End Try
+                        End If
+                        If byteto = 0 Then
+                            If Not reqaccept Is Nothing Then
+                                If reqaccept.Equals("*/*") Then
+                                    byteto = -1
+                                End If
+                            End If
+                        End If
+                    Else
+                        bytefrom = 0
+                        byteto = -1
+                    End If
+                    If byteto <> -1 Then
+                        If bytefrom = 0 Then
+                            requestedbytes = byteto - bytefrom + 1 - mp3header.Length
+                        Else
+                            requestedbytes = byteto - bytefrom + 1
+                        End If
+                    End If
+                    If bytefrom <> 0 Then
+                        bytefrom -= mp3header.Length
+                    End If
+                    Dim mp3buffer As Byte() = New Byte() {}
+                    If Not refuseranged Then
+                        If byteto = -1 Then
+                            loginfo(New String(,) {{"Ranged - no end", ""}, _
+                                                   {"userid ", user}, _
+                                                   {"readfrom", sessions.Item(user).startpos + bytefrom}, _
+                                                   {"bytesread", (memcache.Length - sessions.Item(user).startpos - bytefrom)}, _
+                                                   {"currentbuffer", memcache.Length}})
+                            If memcache.Length - sessions.Item(user).startpos - bytefrom > 0 Then
+                                mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, memcache.Length - sessions.Item(user).startpos - bytefrom)
+                            Else
+                                Return False
+                            End If
+                        ElseIf requestedbytes > 0 Then
+                            If memcache.Length - sessions.Item(user).startpos - bytefrom > requestedbytes Then
+                                loginfo(New String(,) {{"Ranged - with end - can send requested", ""}, _
+                                                       {"userid ", user}, _
+                                                       {"readfrom", sessions.Item(user).startpos + bytefrom}, _
+                                                       {"bytesread", requestedbytes}, _
+                                                       {"currentbuffer", memcache.Length}}, EventLogEntryType.Warning)
+                                mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, requestedbytes)
+                            Else
+                                loginfo(New String(,) {{"Ranged - with end - cannot send requested", ""}, _
+                                                       {"userid ", user}, _
+                                                       {"readfrom", sessions.Item(user).startpos + bytefrom}, _
+                                                       {"bytesread", memcache.Length - sessions.Item(user).startpos - bytefrom}, _
+                                                       {"currentbuffer", memcache.Length}}, EventLogEntryType.Warning)
+                                If memcache.Length - sessions.Item(user).startpos - bytefrom > 0 Then
+                                    mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, memcache.Length - sessions.Item(user).startpos - bytefrom)
+                                Else
+                                    Return False
+                                End If
+                            End If
+                        ElseIf requestedbytes < 0 Then
+                            refuseranged = True
+                        End If
+                    End If
+
+                    Dim datalength As Long = If(bytefrom = 0, mp3header.Length + mp3buffer.Length, mp3buffer.Length)
+                    If bytefrom <> 0 Then
+                        bytefrom += mp3header.Length
+                    End If
+                    If bytefrom = 0 And byteto <> -1 And byteto + 1 < mp3header.Length Then
+                        refuseranged = True
+                    End If
+                    If Not refuseranged Then
+                        If datalength > 0 Then
+                            response.StatusCode = 206
+                            response.KeepAlive = True
+                            response.StatusDescription = "Partial content"
+                            response.AddHeader("Content-Type", "audio/mpeg")
+                            response.AddHeader("Content-Range", "bytes " & bytefrom & "-" & (datalength + bytefrom - 1) & "/" & max)
+                            If bytefrom = 0 Then
+                                Dim buffer As Byte() = New Byte(mp3header.Length + mp3buffer.Length - 1) {}
+                                mp3header.CopyTo(buffer, 0)
+                                mp3buffer.CopyTo(buffer, mp3header.Length)
+                                sessions.Item(user).lastpos = sessions.Item(user).startpos + bytefrom + mp3buffer.Length
+                                outstream.Write(buffer, 0, buffer.Length)
+                            Else
+                                sessions.Item(user).lastpos = sessions.Item(user).startpos + bytefrom + mp3buffer.Length
+                                outstream.Write(mp3buffer, 0, mp3buffer.Length)
+                            End If
+                            loginfo(New String(,) {{"Ranged Response", ""}, _
+                                                   {"userid", user}, _
+                                                   {"range served", bytefrom & "-" & (datalength + bytefrom - 1) & "/" & max}, _
+                                                   {"bytes sent", mp3buffer.Length}, _
+                                                   {"lastpos", sessions.Item(user).lastpos}})
+                        Else
+                            Return False
+                        End If
+                    Else
+                        response.StatusCode = 416
+                        response.StatusDescription = "Requested range not satisfiable"
+                        response.AddHeader("Content-Range", "bytes */" & (memcache.Length - sessions.Item(user).startpos + mp3header.Length - 1))
+                        loginfo(New String(,) {{"Ranged Refused", ""}, _
+                                               {"userid", user}, _
+                                               {"range suggested", "bytes */" & (memcache.Length - sessions.Item(user).startpos + mp3header.Length - 1)}}, EventLogEntryType.Warning)
+                    End If
+                    End If
+            End If
+            Return True
+        End Function
+
+
         Private Sub FileServeThread(ByVal context As HttpListenerContext)
             timer = Now
-            Dim max As Long = 9223372036854775807
             Dim userid As String = System.Text.Encoding.Unicode.GetString(MD5.Create().ComputeHash(System.Text.Encoding.Unicode.GetBytes(context.Request.RemoteEndPoint.ToString().Substring(0, context.Request.RemoteEndPoint.ToString().LastIndexOf(":")) & context.Request.UserAgent.ToString())))
             Dim user As Integer = FindUser(userid)
             If user = -1 Then
@@ -276,160 +469,16 @@ Module WebDesktop
             sessions.Item(user).lastrequest = Now
             Try
                 Dim response As HttpListenerResponse = context.Response
-                Dim outstream As Stream = response.OutputStream()                
-                If context.Request.RawUrl.Equals("/audio.mp3") And enableaudio Then
-                    Dim keys As String() = context.Request.Headers.AllKeys
-                    Dim sreport As String(,) = New String(keys.Length, 1) {}
-                    sreport(0, 0) = "[HTTP Request Headers]"
-                    sreport(0, 1) = ""
-                    For i As Integer = 0 To keys.Length - 1
-                        sreport(i + 1, 0) = keys(i)
-                        sreport(i + 1, 1) = context.Request.Headers.Item(keys(i))
-                    Next
-                    loginfo(sreport)
-                    If sessions.Item(user).startpos = 0 Then
-                        sessions.Item(user).startpos = getstartingposition()
-                    End If
-                    If sessions.Item(user).startpos = 0 Or memcache.Length = 0 Then
-                        response.StatusCode = 404
-                        response.StatusDescription = "Not Found"
-                        'loginfo(New String(,) {{"Request Refused 404", ""}, _
-                        '                       {"User Stream Start", sessions.Item(user).startpos}, _
-                        '                       {"Cache Length", memcache.Length}})
-                    Else
-                        Dim reqrange As String = context.Request.Headers.Item("Range")
-                        Dim reqaccept As String = context.Request.Headers.Item("Accept")
-                        If (reqrange Is Nothing And reqaccept Is Nothing) Or Not reqaccept.Equals("*/*") Then
-                            Dim buffer As Byte() = getbuffer(sessions.Item(user).startpos, memcache.Length)
-                            Dim tmpbuffer As Byte() = New Byte(buffer.Length + mp3header.Length - 1) {}
-                            mp3header.CopyTo(tmpbuffer, 0)
-                            buffer.CopyTo(tmpbuffer, mp3header.Length)
-                            response.StatusCode = 200
-                            response.StatusDescription = "OK"
-                            response.KeepAlive = True
-                            response.ContentType = "audio/mpeg"
-                            response.AddHeader("Content-Disposition", "attachment; filename=""audio.mp3""")
-                            outstream.Write(tmpbuffer, 0, tmpbuffer.Length)
-                            loginfo(New String(,) {{"Normal Response", ""}, _
-                                                   {"userid ", user}, _
-                                                   {"user startpos", sessions.Item(user).startpos}, _
-                                                   {"BufferSize", memcache.Length}, _
-                                                   {"data sent", tmpbuffer.Length}}, EventLogEntryType.Information)
-                        Else
-                            Dim bytefroms As String = "NA"
-                            Dim bytetos As String = "NA"
-                            Dim bytefrom As Long = 0
-                            Dim byteto As Long = 0
-                            Dim refuseranged As Boolean = False
-                            Dim requestedbytes As Long = -1
-                            If reqaccept.Equals("*/*") Then
-                                byteto = -1
-                            Else
-                                If reqrange.IndexOf("-") <> -1 Then
-                                    bytefroms = reqrange.Substring(reqrange.IndexOf("=") + 1, reqrange.IndexOf("-") - reqrange.IndexOf("=") - 1)
-                                End If
-                                If bytefroms = "NA" Then
-                                    bytefrom = -1
-                                    refuseranged = True
-                                Else
-                                    Try
-                                        bytefrom = Convert.ToInt64(bytefroms)
-                                    Catch ex As Exception
-                                        bytefrom = -1
-                                        refuseranged = True
-                                    End Try
-                                End If
-                                If reqrange.IndexOf("/") <> -1 Then
-                                    bytetos = reqrange.Substring(reqrange.IndexOf("-") + 1, reqrange.IndexOf("/") - reqrange.IndexOf("-") - 1)
-                                Else
-                                    bytetos = reqrange.Substring(reqrange.IndexOf("-") + 1, reqrange.Length - reqrange.IndexOf("-") - 1)
-                                End If
-                                If bytetos = "NA" Then
-                                    byteto = -1
-                                Else
-                                    Try
-                                        byteto = Convert.ToInt64(bytetos)
-                                    Catch ex As Exception
-                                        byteto = -1
-                                    End Try
-                                End If
-                            End If
-
-                            If byteto <> -1 Then
-                                requestedbytes = byteto - bytefrom + 1
-                            End If
-                            If bytefrom = 0 Then
-                                requestedbytes -= mp3header.Length
-                            Else
-                                bytefrom -= mp3header.Length
-                            End If
-                            Dim mp3buffer As Byte() = New Byte() {}
-                            If byteto = -1 Then
-                                loginfo(New String(,) {{"ranged - no end", ""}, _
-                                                       {"userid ", user}, _
-                                                       {"readfrom", sessions.Item(user).startpos + bytefrom}, _
-                                                       {"bytesread", (memcache.Length - sessions.Item(user).startpos - bytefrom)}, _
-                                                       {"currentbuffer", memcache.Length}})
-                                mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, memcache.Length - sessions.Item(user).startpos - bytefrom)
-                            ElseIf requestedbytes > 0 Then
-                                If memcache.Length - sessions.Item(user).startpos - bytefrom > requestedbytes Then
-                                    loginfo(New String(,) {{"ranged - with end - can send requested", ""}, _
-                                                           {"userid ", user}, _
-                                                           {"readfrom", sessions.Item(user).startpos + bytefrom}, _
-                                                           {"bytesread", requestedbytes}, _
-                                                           {"currentbuffer", memcache.Length}}, EventLogEntryType.Warning)
-                                    mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, requestedbytes)
-                                Else
-                                    loginfo(New String(,) {{"ranged - with end - cannot send requested", ""}, _
-                                                           {"userid ", user}, _
-                                                           {"readfrom", sessions.Item(user).startpos + bytefrom}, _
-                                                           {"bytesread", memcache.Length - sessions.Item(user).startpos - bytefrom}, _
-                                                           {"currentbuffer", memcache.Length}}, EventLogEntryType.Warning)
-                                    mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, memcache.Length - sessions.Item(user).startpos - bytefrom)
-                                End If
-                            ElseIf requestedbytes < 0 Then
-                                refuseranged = True
-                            End If
-                            Dim datalength As Long = If(bytefrom = 0, mp3header.Length + mp3buffer.Length, mp3buffer.Length)
-                            If bytefrom <> 0 Then
-                                bytefrom += mp3header.Length
-                            End If
-                            If bytefrom = 0 And byteto <> -1 And byteto + 1 < mp3header.Length Then
-                                refuseranged = True
-                            End If
-                            If Not refuseranged Then
-                                response.StatusCode = 206
-                                response.KeepAlive = True
-                                response.StatusDescription = "Partial content"
-                                response.AddHeader("Content-Type", "audio/mpeg")
-                                response.AddHeader("Content-Range", "bytes " & bytefrom & "-" & (datalength + bytefrom - 1) & "/" & max)
-                                If bytefrom = 0 Then
-                                    Dim buffer As Byte() = New Byte(mp3header.Length + mp3buffer.Length - 1) {}
-                                    mp3header.CopyTo(buffer, 0)
-                                    mp3buffer.CopyTo(buffer, mp3header.Length)
-                                    outstream.Write(buffer, 0, buffer.Length)
-                                Else
-                                    If mp3buffer.Length > 0 Then
-                                        outstream.Write(mp3buffer, 0, mp3buffer.Length)
-                                        outstream.Flush()
-                                    End If
-                                End If
-                                loginfo(New String(,) {{"Ranged Response", ""}, _
-                                                       {"userid", user}, _
-                                                       {"range served", bytefrom & "-" & (datalength + bytefrom - 1) & "/" & max}, _
-                                                       {"bytes sent", mp3buffer.Length}})
-                                sessions.Item(user).position += mp3buffer.Length
-                            Else
-                                response.StatusCode = 416
-                                response.StatusDescription = "Requested range not satisfiable"
-                                response.AddHeader("Content-Range", "bytes 0-" & (memcache.Length - sessions.Item(user).startpos + mp3header.Length - 1) & "/*")
-                                loginfo(New String(,) {{"Ranged Refused", ""}, _
-                                                       {"userid", user}, _
-                                                       {"range suggested", "0-" & (memcache.Length - sessions.Item(user).startpos + mp3header.Length - 1) & "/*"}}, EventLogEntryType.Warning)
-                            End If
-                        End If
-                    End If                    
-                ElseIf context.Request.RawUrl.Equals("/cursor.png") Or context.Request.RawUrl.Equals("/favicon.ico") Or context.Request.RawUrl.Equals("/jquery.min.js") Or context.Request.RawUrl.Equals("/styles.css") Or context.Request.RawUrl.Equals("/close.png") Or context.Request.RawUrl.Equals("/settings.png") Or context.Request.RawUrl.Equals("/interactions.js") Or context.Request.RawUrl.Equals("/audio.js") Then
+                Dim outstream As Stream = response.OutputStream()
+                response.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate")
+                response.AddHeader("Pragma", "no-cache")
+                response.AddHeader("Expires", "0")
+                If context.Request.RawUrl.IndexOf("/audio.mp3") >= 0 And enableaudio Then
+                    While Not serveaudio(response, outstream, context, user)
+                        Thread.Sleep(10)
+                        user = FindUser(userid)
+                    End While
+                ElseIf context.Request.RawUrl.Equals("/audio.html") Or context.Request.RawUrl.Equals("/cursor.png") Or context.Request.RawUrl.Equals("/favicon.ico") Or context.Request.RawUrl.Equals("/jquery.min.js") Or context.Request.RawUrl.Equals("/styles.css") Or context.Request.RawUrl.Equals("/close.png") Or context.Request.RawUrl.Equals("/settings.png") Or context.Request.RawUrl.Equals("/interactions.js") Or context.Request.RawUrl.Equals("/audio.js") Then
                     Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
                     filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "\files").Replace("\", "/")
                     Dim buffer As Byte() = File.ReadAllBytes(filePath & context.Request.RawUrl)
@@ -455,7 +504,16 @@ Module WebDesktop
                     index = index.Replace("{resolution}", imageresolution)
                     index = index.Replace("{loglevel}", loglevel)
                     index = index.Replace("{buffering}", bufferingtime)
+                    index = index.Replace("{randomstring}", getrandomstring())
                     Dim buffer As Byte() = System.Text.Encoding.ASCII.GetBytes(index)
+                    response.StatusCode = 200
+                    response.StatusDescription = "OK"
+                    response.ContentType = "text/html"
+                    sessions.Item(user).startpos = getstartingposition()
+                    outstream.Write(buffer, 0, buffer.Length)
+                ElseIf context.Request.RawUrl.Equals("/resetposition") Then
+                    sessions.Item(user).startpos = sessions.Item(user).lastpos
+                    Dim buffer As Byte() = System.Text.Encoding.ASCII.GetBytes(getrandomstring())
                     response.StatusCode = 200
                     response.StatusDescription = "OK"
                     response.ContentType = "text/html"
@@ -680,7 +738,9 @@ Module WebDesktop
                 outstream.Close()
                 response.Close()
             Catch ex As Exception
-                log("[FileServeThread]" & Environment.NewLine & ex.Message & Environment.NewLine & ex.Source & Environment.NewLine & ex.StackTrace, EventLogEntryType.Error)
+                If Not ex.Message.Equals("The specified network name is no longer available") And Not ex.Message.Equals("An operation was attempted on a nonexistent network connection") And Not ex.Message.Equals("The I/O operation has been aborted because of either a thread exit or an application request") Then
+                    log("[FileServeThread]" & Environment.NewLine & ex.Message & Environment.NewLine & ex.Source & Environment.NewLine & ex.StackTrace, EventLogEntryType.Error)
+                End If
             End Try
         End Sub
 

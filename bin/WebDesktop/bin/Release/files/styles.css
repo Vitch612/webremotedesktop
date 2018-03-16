@@ -1,8 +1,9 @@
 body {
   background-color:black;
 }
+
 .mediadiv {
-  visibility:hidden;
+  display:none;
 }
 .settings {
   display:none;
@@ -12,7 +13,7 @@ body {
   width:75%;  
   height:70%;
   min-width:265px;
-  min-height:265px;
+  min-height:290px;
   border-style:solid;
   border-color:black;
   border-width:1px;
@@ -88,13 +89,16 @@ body {
 }
 .message {
   display:none;
+  overflow: scroll;
   position:relative;
   top:0;
   left:0;
+  font-size:12px;
   width:100%;
-  height:60px;
+  height:300px;
   z-index:20;
-  background-color:red;
+  color:red;
+  background-color:lightgrey;
 }
 .cvdiv {
   position: relative;
