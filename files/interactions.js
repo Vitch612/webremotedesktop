@@ -476,6 +476,7 @@ $(document).ready(function() {
 	  method: "GET",
 	  data: {
 		  Audio:settingsform.elements["Audio"].checked,
+		  Microphone:settingsform.elements["Microphone"].checked,
 		  Timeout:settingsform.elements["Timeout"].value,
 		  Resolution:settingsform.elements["Resolution"].value,
 		  LogLevel:settingsform.elements["LogLevel"].value,

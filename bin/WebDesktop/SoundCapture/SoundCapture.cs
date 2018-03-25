@@ -357,7 +357,7 @@ namespace SoundCapture
         }
 
 
-        public CoreAudio()
+        public CoreAudio(bool microphone = false)
         {
             const uint REFTIMES_PER_SEC = 10000000;
             const uint CLSCTX_INPROC_SERVER = 1;            
@@ -377,7 +377,14 @@ namespace SoundCapture
             }
 
             IntPtr pDevice = IntPtr.Zero;
-            int retVal = iMde.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eConsole, ref pDevice);
+
+            //iMde.EnumAudioEndpoints(EDataFlow.eCapture, DEVICE_STATE_ACTIVE,ref pDevice);
+            int retVal;
+            if (microphone)
+                retVal = iMde.GetDefaultAudioEndpoint(EDataFlow.eCapture, ERole.eConsole, ref pDevice);
+            else
+                retVal = iMde.GetDefaultAudioEndpoint(EDataFlow.eRender, ERole.eConsole, ref pDevice);            
+            
             if (retVal != 0)
             {
                 throw new Exception("IMMDeviceEnumerator.GetDefaultAudioEndpoint()");
@@ -451,7 +458,11 @@ namespace SoundCapture
                 throw new Exception("IAudioClient.IsFormatSupported()");
             }
 
-            retVal = iAudioClient.Initialize(AUDCLNT_SHAREMODE.AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK, 2000000, 0, reqForm, Guid.Empty);
+            if (microphone)
+                retVal = iAudioClient.Initialize(AUDCLNT_SHAREMODE.AUDCLNT_SHAREMODE_EXCLUSIVE,0, 2000000, 0, reqForm, Guid.Empty);
+            else
+                retVal = iAudioClient.Initialize(AUDCLNT_SHAREMODE.AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_LOOPBACK, 2000000, 0, reqForm, Guid.Empty);
+            
             if (retVal != 0)
             {
                 throw new Exception("IAudioClient.Initialize() "+retVal);
