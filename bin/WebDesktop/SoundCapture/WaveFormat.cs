@@ -8,6 +8,22 @@ using System.Diagnostics;
 namespace SoundCapture
 {
 
+    [AttributeUsage(AttributeTargets.Enum | AttributeTargets.Struct | AttributeTargets.Class)]
+    internal class UnmanagedNameAttribute : Attribute
+    {
+        private string m_Name;
+
+        public UnmanagedNameAttribute(string s)
+        {
+            m_Name = s;
+        }
+
+        public override string ToString()
+        {
+            return m_Name;
+        }
+    }
+
     public static class MarshalHelpers
     {
         /// <summary>

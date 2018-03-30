@@ -25,7 +25,7 @@ Module WebDesktop
         Private port As Integer = 8888
         Private imageresolution As Integer = 80
         Private Shared loglevel As Byte = 1
-        Dim _snd As CoreAudio
+        Dim _snd As audioCapture
         Private timer As DateTime
         Private watchfortimeout As Thread
         Private httplistenthread As Thread
@@ -70,15 +70,13 @@ Module WebDesktop
             Dim match As samplepointer
             For i As Integer = 0 To samples.Count - 1
                 ts1 = currenttime - samples.Item(i).time
-                If ts1.TotalMilliseconds > bufferingtime - 50 And ts1.TotalMilliseconds < bufferingtime + 50 Then
-                    If Not match Is Nothing Then
-                        ts2 = currenttime - match.time
-                        If Math.Abs(bufferingtime - ts1.TotalMilliseconds) > Math.Abs(bufferingtime - ts2.TotalMilliseconds) Then
-                            match = samples.Item(i)
-                        End If
-                    Else
+                If Not match Is Nothing Then
+                    ts2 = currenttime - match.time
+                    If Math.Abs(bufferingtime - ts1.TotalMilliseconds) > Math.Abs(bufferingtime - ts2.TotalMilliseconds) Then
                         match = samples.Item(i)
                     End If
+                Else
+                    match = samples.Item(i)                
                 End If
             Next
             If match Is Nothing Then
@@ -133,8 +131,12 @@ Module WebDesktop
         Private Sub stopall(Optional ByVal waittime As Integer = 50)
             Thread.Sleep(waittime)
             If enableaudio Then
-                _snd.Dispose()
-                getsoundthread.Abort()
+                If Not _snd Is Nothing Then
+                    _snd.Dispose()
+                End If
+                If Not getsoundthread Is Nothing Then
+                    getsoundthread.Abort()
+                End If
             End If
             Try
                 If _httpListener.IsListening Then
@@ -152,8 +154,9 @@ Module WebDesktop
                 restart = False
                 Dim filePath As String = System.Reflection.Assembly.GetExecutingAssembly().EscapedCodeBase
                 filePath = (filePath.Substring(filePath.IndexOf("file:///") + 8)).Replace("\", "/")
+                log("restart attempt " & filePath)
                 Dim Info As ProcessStartInfo = New ProcessStartInfo()
-                Info.Arguments = "/C ping 127.0.0.1 -n 1 & """ & filePath & """"
+                Info.Arguments = "/C ping 127.0.0.1 -n 2 & """ & filePath & """"
                 Info.WindowStyle = ProcessWindowStyle.Hidden
                 Info.CreateNoWindow = True
                 Info.FileName = "cmd.exe"
@@ -292,7 +295,7 @@ Module WebDesktop
             End If
             If sessions.Item(user).startpos = 0 Then
                 response.StatusCode = 503
-                response.StatusDescription = "Service Unavailable"
+                response.StatusDescription = "Service Unavailable " & memcache.Length
                 'response.AddHeader("Retry-After", "1")
                 'loginfo(New String(,) {{"Request Refused 503", ""}, _
                 '                       {"User Stream Start", sessions.Item(user).startpos}, _
@@ -786,65 +789,75 @@ Module WebDesktop
 
         Public Sub New()
             MyBase.New()
-            Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
-            filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "/files/config.ini").Replace("\", "/")
             Try
-                If System.IO.File.Exists(filePath) Then
-                    Dim config As String() = File.ReadAllLines(filePath)
-                    For Each line As String In config
-                        Dim parts As String() = line.Split("=")
-                        If parts.Length = 2 Then
-                            Select Case parts(0).Trim()
-                                Case "Port"
-                                    Try
-                                        port = Convert.ToInt32(parts(1).Trim())
-                                    Catch ex As Exception
-                                    End Try
-                                Case "Audio"
-                                    If parts(1).Trim().Equals("0") Then
-                                        enableaudio = False
-                                    End If
-                                Case "Microphone"
-                                    If parts(1).Trim().Equals("1") Then
-                                        microphone = True
-                                    End If
-                                Case "Timeout"
-                                    Try
-                                        idletime = Convert.ToInt32(parts(1).Trim())
-                                    Catch ex As Exception
-                                    End Try
-                                Case "LogLevel"
-                                    Try
-                                        loglevel = Convert.ToInt32(parts(1).Trim())
-                                    Catch ex As Exception
-                                    End Try
-                                Case "Resolution"
-                                    Try
-                                        imageresolution = Convert.ToInt32(parts(1).Trim())
-                                    Catch ex As Exception
-                                    End Try
-                                Case "Buffering"
-                                    Try
-                                        bufferingtime = Convert.ToInt32(parts(1).Trim())
-                                    Catch ex As Exception
-                                    End Try
-                            End Select
-                        End If
-                    Next
-                End If
-            Catch ex As Exception
-                log("[Load Config]" & Environment.NewLine & ex.Message)
-            End Try
-            If enableaudio Then
+                Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
+                filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "/files/config.ini").Replace("\", "/")
                 Try
-                    _snd = New CoreAudio(microphone)
+                    If System.IO.File.Exists(filePath) Then
+                        Dim config As String() = File.ReadAllLines(filePath)
+                        For Each line As String In config
+                            Dim parts As String() = line.Split("=")
+                            If parts.Length = 2 Then
+                                Select Case parts(0).Trim()
+                                    Case "Port"
+                                        Try
+                                            port = Convert.ToInt32(parts(1).Trim())
+                                        Catch ex As Exception
+                                        End Try
+                                    Case "Audio"
+                                        If parts(1).Trim().Equals("0") Then
+                                            enableaudio = False
+                                        End If
+                                    Case "Microphone"
+                                        If parts(1).Trim().Equals("1") Then
+                                            microphone = True
+                                        End If
+                                    Case "Timeout"
+                                        Try
+                                            idletime = Convert.ToInt32(parts(1).Trim())
+                                        Catch ex As Exception
+                                        End Try
+                                    Case "LogLevel"
+                                        Try
+                                            loglevel = Convert.ToInt32(parts(1).Trim())
+                                        Catch ex As Exception
+                                        End Try
+                                    Case "Resolution"
+                                        Try
+                                            imageresolution = Convert.ToInt32(parts(1).Trim())
+                                        Catch ex As Exception
+                                        End Try
+                                    Case "Buffering"
+                                        Try
+                                            bufferingtime = Convert.ToInt32(parts(1).Trim())
+                                        Catch ex As Exception
+                                        End Try
+                                End Select
+                            End If
+                        Next
+                    End If
                 Catch ex As Exception
-                    log("[Init Sound]" & Environment.NewLine & ex.Message & Environment.NewLine & ex.StackTrace)
+                    log("[Load Config]" & Environment.NewLine & ex.Message)
                 End Try
-                getsoundthread = New Thread(AddressOf getsoundsamples)
-                getsoundthread.IsBackground = False
-                getsoundthread.Start()
-            End If
+                If enableaudio Then
+                    Try
+                        '_snd = New CoreAudio(microphone)
+                        _snd = New WinMM(microphone)
+                    Catch ex As Exception
+                        Try
+                            _snd = New WinMM(microphone)
+                        Catch ex2 As Exception
+                            enableaudio = False
+                            _snd = Nothing
+                            log("[Init Sound]" & Environment.NewLine & ex2.Message & Environment.NewLine & ex2.StackTrace)
+                        End Try
+                    End Try
+                    If enableaudio Then
+                        getsoundthread = New Thread(AddressOf getsoundsamples)
+                        getsoundthread.IsBackground = False
+                        getsoundthread.Start()
+                    End If
+                End If
             httplistenthread = New Thread(AddressOf ThreadTask)
             httplistenthread.IsBackground = False
             httplistenthread.Start()
@@ -852,6 +865,9 @@ Module WebDesktop
             watchfortimeout = New Thread(AddressOf timerThread)
             watchfortimeout.IsBackground = True
             watchfortimeout.Start()
+            Catch ex As Exception
+                log("[Init Application]" & Environment.NewLine & ex.Message & Environment.NewLine & ex.StackTrace)
+            End Try
         End Sub
     End Class
 

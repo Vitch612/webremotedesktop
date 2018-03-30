@@ -5,10 +5,567 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Diagnostics;
+using System.Security;
 
 namespace SoundCapture
-{    
-    public class CoreAudio
+{
+    public class WinMM : audioCapture
+    {
+        static private int BUFFNUM = 10;
+        static private WAVEHDR[] buffers = new WAVEHDR[BUFFNUM];
+        static private GCHandle[] buffhandles = new GCHandle[BUFFNUM];
+        static private bool recording = false;
+        static private int currentbuffer = 0;
+        static private IntPtr phwi = IntPtr.Zero;
+        static private MemoryStream memStream;
+        static private MemoryStream waveStream;
+        static private Object synclock = new Object();
+        static private Object reclock = new Object();
+        static private Mp3Writer _mp3writer;
+        static private  Thread _trd;
+        static private long wavepointer = 0;        
+        static private long bytesread = 0;
+        static private WaveFormat waveformat;
+
+        public static void myDelegate(IntPtr hwo, MIWM uMsg, IntPtr dwInstance, IntPtr dwParam1, IntPtr dwParam2)
+        {
+            if (recording)
+            {
+                try
+                {
+                    switch (uMsg)
+                    {
+                        case MIWM.WIM_OPEN:
+                            break;
+                        case MIWM.WIM_DATA:
+                            byte[] bytes = new byte[buffers[currentbuffer].dwBytesRecorded];
+                            Marshal.Copy(buffers[currentbuffer].lpData, bytes, 0, buffers[currentbuffer].dwBytesRecorded);
+                            lock (reclock)
+                            {
+                                waveStream.Write(bytes, 0, bytes.Length);
+                            }
+                            ThrowExceptionForError(waveInAddBuffer(phwi, buffhandles[currentbuffer].AddrOfPinnedObject(), Marshal.SizeOf(typeof(WaveHdr))));                            
+                            currentbuffer = (currentbuffer + 1) % BUFFNUM;
+                            break;
+                        case MIWM.WIM_CLOSE:
+                            break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    logerror(e);
+                }
+            }
+        }
+
+        static int readcounter = 0;
+        public byte[] readbytes()
+        {
+            if (recording)
+            {
+                lock (synclock)
+                {
+                    if (memStream.Length > bytesread)
+                    {                        
+                        long oldpos = memStream.Position;
+                        int toread = (int)(memStream.Length - bytesread);
+                        memStream.Position = bytesread;
+                        byte[] buffer = new byte[toread];
+                        memStream.Read(buffer, 0, toread);
+                        memStream.Position = oldpos;
+                        bytesread += toread;
+                        loginfo("("+readcounter+++") mp3=" + bytesread + " wave=" + waveStream.Length);
+                        return buffer;
+                    }
+                }
+            }
+            return new byte[0];
+        }
+
+        private void wavtomp3()
+        {
+            try
+            {
+                while (recording)
+                {
+                    if (waveStream.Length > wavepointer)
+                    {                        
+                        int toread = (int)(waveStream.Length - wavepointer);
+                        byte[] buffer = new byte[toread];
+                        lock (reclock)
+                        {
+                            long prevpos = waveStream.Position;
+                            waveStream.Position = wavepointer;
+                            waveStream.Read(buffer, 0, toread);
+                            waveStream.Position = prevpos;
+                            wavepointer += toread;
+                        }
+                        lock (synclock)
+                        {
+                            _mp3writer.Write(buffer, 0, buffer.Length);
+                        }
+                    }
+                    Thread.Sleep(10);
+                }
+            }
+            catch (Exception e)
+            {
+                logerror(e);
+            }
+
+        }
+
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct WaveHdr
+        {
+            public IntPtr lpData; // pointer to locked data buffer
+            public int dwBufferLength; // length of data buffer
+            public int dwBytesRecorded; // used for input only
+            public IntPtr dwUser; // for client's use
+            public int dwFlags; // assorted flags (see defines)
+            public int dwLoops; // loop control counter
+            public IntPtr lpNext; // PWaveHdr, reserved for driver
+            public int reserved; // reserved for driver
+        }
+
+        [StructLayout(LayoutKind.Sequential), UnmanagedName("WAVEHDR")]
+        public class WAVEHDR : IDisposable
+        {
+            [Flags]
+            public enum WHDR
+            {
+                None = 0x0,
+                Done = 0x00000001,
+                Prepared = 0x00000002,
+                BeginLoop = 0x00000004,
+                EndLoop = 0x00000008,
+                InQueue = 0x00000010
+            }
+
+            public IntPtr lpData;
+            public int dwBufferLength;
+            public int dwBytesRecorded;
+            public IntPtr dwUser;
+            public WHDR dwFlags;
+            public int dwLoops;
+            public IntPtr lpNext;
+            public IntPtr Reserved;
+
+            public WAVEHDR(int iMaxSize)
+            {
+                lpData = Marshal.AllocCoTaskMem(iMaxSize);
+                dwBufferLength = iMaxSize;
+                dwUser = IntPtr.Zero;
+                dwFlags = WHDR.None;
+                dwLoops = 0;
+                lpNext = IntPtr.Zero;
+                Reserved = IntPtr.Zero;
+            }
+
+            #region IDisposable Members
+
+            public void Dispose()
+            {
+                if (lpData != IntPtr.Zero)
+                {
+                    Marshal.FreeCoTaskMem(lpData);
+                    lpData = IntPtr.Zero;
+                }
+            }
+
+            #endregion
+        }
+
+        public enum MMRESULT : int
+        {
+            MMSYSERR_NOERROR = 0,
+            MMSYSERR_ERROR = 1,
+            MMSYSERR_BADDEVICEID = 2,
+            MMSYSERR_NOTENABLED = 3,
+            MMSYSERR_ALLOCATED = 4,
+            MMSYSERR_INVALHANDLE = 5,
+            MMSYSERR_NODRIVER = 6,
+            MMSYSERR_NOMEM = 7,
+            MMSYSERR_NOTSUPPORTED = 8,
+            MMSYSERR_BADERRNUM = 9,
+            MMSYSERR_INVALFLAG = 10,
+            MMSYSERR_INVALPARAM = 11,
+            MMSYSERR_HANDLEBUSY = 12,
+            MMSYSERR_INVALIDALIAS = 13,
+            MMSYSERR_BADDB = 14,
+            MMSYSERR_KEYNOTFOUND = 15,
+            MMSYSERR_READERROR = 16,
+            MMSYSERR_WRITEERROR = 17,
+            MMSYSERR_DELETEERROR = 18,
+            MMSYSERR_VALNOTFOUND = 19,
+            MMSYSERR_NODRIVERCB = 20,
+            WAVERR_BADFORMAT = 32,
+            WAVERR_STILLPLAYING = 33,
+            WAVERR_UNPREPARED = 34
+        }
+
+        public const int MMSYSERR_NOERROR = 0;
+        public const int MAXPNAMELEN = 32;
+        public const int MIXER_LONG_NAME_CHARS = 64;
+        public const int MIXER_SHORT_NAME_CHARS = 16;
+        public const int MIXER_GETLINEINFOF_COMPONENTTYPE = 0x3;
+        public const int MIXER_GETCONTROLDETAILSF_VALUE = 0x0;
+        public const int MIXER_GETLINECONTROLSF_ONEBYTYPE = 0x2;
+        public const int MIXER_SETCONTROLDETAILSF_VALUE = 0x0;
+        public const int MIXERLINE_COMPONENTTYPE_DST_FIRST = 0x0;
+        public const int MIXERLINE_COMPONENTTYPE_SRC_FIRST = 0x1000;
+        public const int MIXERLINE_COMPONENTTYPE_DST_SPEAKERS = (MIXERLINE_COMPONENTTYPE_DST_FIRST + 4);
+        public const int MIXERLINE_COMPONENTTYPE_SRC_MICROPHONE = (MIXERLINE_COMPONENTTYPE_SRC_FIRST + 3);
+        public const int MIXERLINE_COMPONENTTYPE_SRC_LINE = (MIXERLINE_COMPONENTTYPE_SRC_FIRST + 2);
+        public const int MIXERCONTROL_CT_CLASS_FADER = 0x50000000;
+        public const int MIXERCONTROL_CT_UNITS_UNSIGNED = 0x30000;
+        public const int MIXERCONTROL_CT_CLASS_SWITCH = 0x20000000;
+        public const int MIXERCONTROL_CT_SC_SWITCH_BOOLEAN = 0x0;
+        public const int MIXERCONTROL_CT_UNITS_BOOLEAN = 0x10000;
+        public const int MIXERCONTROL_CONTROLTYPE_FADER = (MIXERCONTROL_CT_CLASS_FADER | MIXERCONTROL_CT_UNITS_UNSIGNED);
+        public const int MIXERCONTROL_CONTROLTYPE_VOLUME = (MIXERCONTROL_CONTROLTYPE_FADER + 1);
+        public const int MIXERCONTROL_CONTROLTYPE_BOOLEAN = (MIXERCONTROL_CT_CLASS_SWITCH | MIXERCONTROL_CT_SC_SWITCH_BOOLEAN | MIXERCONTROL_CT_UNITS_BOOLEAN);
+
+        public const int MIXERCONTROL_CONTROLTYPE_MUTE = (MIXERCONTROL_CONTROLTYPE_BOOLEAN + 2);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MIXERCAPS
+        {
+            public ushort wMid;
+            public ushort wPid;
+            public int vDriverVersion;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string szPname;
+            public uint fdwSupport;
+            public uint cDestinations;
+            public override String ToString()
+            {
+                return String.Format(" Manufacturer ID: {0}\n Product ID: {1}\n Driver Version: {2}\n Product Name: \"{3}\"\n Support: {4}\n Destinations: {5}\n", wMid, wPid, vDriverVersion, szPname, fdwSupport, cDestinations);
+            }
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        public struct WAVEOUTCAPS
+        {
+            public ushort wMid;
+            public ushort wPid;
+            public uint vDriverVersion;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string szPname;
+            public uint dwFormats;
+            public ushort wChannels;
+            public ushort wReserved1;
+            public uint dwSupport;
+            public override string ToString()
+            {
+                return string.Format(" wMid:{0}\n wPid:{1}\n vDriverVersion:{2}\n szPname:\"{3}\"\n dwFormats:{4}\n wChannels:{5}\n wReserved:{6}\n dwSupport:{7}\n", wMid, wPid, vDriverVersion, szPname, dwFormats, wChannels, wReserved1, dwSupport);
+            }
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        public struct WAVEINCAPS
+        {
+            public ushort wMid;
+            public ushort wPid;
+            public int vDriverVersion;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string szPname;
+            public uint dwFormats;
+            public ushort wChannels;
+            public ushort wReserved;
+            public override string ToString()
+            {
+                return string.Format(" wMid:{0}\n wPid:{1}\n vDriverVersion:{2}\n szPname:\"{3}\"\n dwFormats:{4}\n wChannels:{5}\n wReserved:{6}\n", wMid, wPid, vDriverVersion, szPname, dwFormats, wChannels, wReserved);
+            }
+        }
+
+        public struct MIXERCONTROL
+        {
+            public int cbStruct;
+            public int dwControlID;
+            public int dwControlType;
+            public int fdwControl;
+            public int cMultipleItems;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MIXER_SHORT_NAME_CHARS)]
+            public string szShortName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MIXER_LONG_NAME_CHARS)]
+            public string szName;
+            public int lMinimum;
+            public int lMaximum;
+            [MarshalAs(UnmanagedType.U4, SizeConst = 10)]
+            public int reserved;
+        }
+
+        public struct MIXERCONTROLDETAILS
+        {
+            public int cbStruct;
+            public int dwControlID;
+            public int cChannels;
+            public int item;
+            public int cbDetails;
+            public IntPtr paDetails;
+        }
+
+        public struct MIXERCONTROLDETAILS_UNSIGNED
+        {
+            public int dwValue;
+        }
+
+        public struct MIXERCONTROLDETAILS_BOOLEAN
+        {
+            public int dwValue;
+        }
+
+        public struct MIXERLINE
+        {
+            public int cbStruct;
+            public int dwDestination;
+            public int dwSource;
+            public int dwLineID;
+            public int fdwLine;
+            public int dwUser;
+            public int dwComponentType;
+            public int cChannels;
+            public int cConnections;
+            public int cControls;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MIXER_SHORT_NAME_CHARS)]
+            public string szShortName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MIXER_LONG_NAME_CHARS)]
+            public string szName;
+            public int dwType;
+            public int dwDeviceID;
+            public int wMid;
+            public int wPid;
+            public int vDriverVersion;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAXPNAMELEN)]
+            public string szPname;
+        }
+
+        public struct MIXERLINECONTROLS
+        {
+            public int cbStruct;
+            public int dwLineID;
+
+            public int dwControl;
+            public int cControls;
+            public int cbmxctrl;
+            public IntPtr pamxctrl;
+        }
+
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveInGetNumDevs();
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutGetNumDevs();
+        [DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern int waveInGetDevCaps(IntPtr uDeviceID, ref WAVEINCAPS pwic, uint cbwic);
+        [DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        public static extern int waveOutGetDevCaps(IntPtr hwo, ref WAVEOUTCAPS pwoc, uint cbwoc);
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerGetDevCaps(IntPtr uMxId, ref MIXERCAPS pmxcaps, uint cbmxcaps);
+
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerClose(int hmx);
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerGetControlDetailsA(int hmxobj, ref MIXERCONTROLDETAILS pmxcd, int fdwDetails);
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerGetID(int hmxobj, int pumxID, int fdwId);
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerGetLineControlsA(int hmxobj, ref MIXERLINECONTROLS pmxlc, int fdwControls);
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerGetLineInfoA(int hmxobj, ref MIXERLINE pmxl, int fdwInfo);
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerGetNumDevs();
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerMessage(int hmx, int uMsg, int dwParam1, int dwParam2);
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerOpen(out int phmx, int uMxId, int dwCallback, int dwInstance, int fdwOpen);
+        [DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+        public static extern int mixerSetControlDetails(int hmxobj, ref MIXERCONTROLDETAILS pmxcd, int fdwDetails);
+
+        [DllImport("winmm.dll", EntryPoint = "sndPlaySoundA")]
+        public static extern int sndPlaySound(string lpszSoundName, int uFlags);
+
+        public delegate void WaveInDelegate(IntPtr hwo, MIWM uMsg, IntPtr dwInstance, IntPtr dwParam1, IntPtr dwParam2);
+
+        // WaveOut calls
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutPrepareHeader(IntPtr hWaveOut, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveOutHdr, int uSize);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutUnprepareHeader(IntPtr hWaveOut, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveOutHdr, int uSize);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutWrite(IntPtr hWaveOut, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveOutHdr, int uSize);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutOpen(out IntPtr hWaveOut, int uDeviceID, WaveFormat lpFormat, WaveInDelegate dwCallback, int dwInstance, int dwFlags);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutReset(IntPtr hWaveOut);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutClose(IntPtr hWaveOut);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutPause(IntPtr hWaveOut);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutRestart(IntPtr hWaveOut);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutGetPosition(IntPtr hWaveOut, out int lpInfo, int uSize);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutSetVolume(IntPtr hWaveOut, int dwVolume);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveOutGetVolume(IntPtr hWaveOut, out int dwVolume);
+
+        // WaveIn calls
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveInAddBuffer(IntPtr hwi, IntPtr pwh, int cbwh);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveInClose(IntPtr hwi);
+        [DllImport("winmm.dll", EntryPoint = "waveInOpen"), SuppressUnmanagedCodeSecurity]
+        public static extern int waveInOpen(out IntPtr phwi, int uDeviceID, [In, MarshalAs(UnmanagedType.LPStruct)] WaveFormat lpFormat, WaveInDelegate dwCallback, IntPtr dwInstance, WaveOpenFlags dwFlags);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveInPrepareHeader(IntPtr hWaveIn, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveInHdr, int uSize);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveInUnprepareHeader(IntPtr hWaveIn, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveInHdr, int uSize);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveInReset(IntPtr hwi);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveInStart(IntPtr hwi);
+        [DllImport("winmm.dll", SetLastError = true)]
+        public static extern int waveInStop(IntPtr hwi);
+
+        [DllImport("winmm.dll", ExactSpelling = true, CharSet = CharSet.Unicode, EntryPoint = "waveInGetErrorTextW"),SuppressUnmanagedCodeSecurity]
+        public static extern int GetErrorText(int errvalue,[Out] StringBuilder lpText,int uSize);
+
+        public static void ThrowExceptionForError(int rc)
+        {
+            if (rc != 0)
+            {
+                StringBuilder foo = new StringBuilder(256);
+                GetErrorText(rc, foo, 256);
+                throw new Exception(foo.ToString());
+            }
+        }
+
+
+        public enum MIWM
+        {
+            WIM_OPEN = 0x3BE,
+            WIM_CLOSE = 0x3BF,
+            WIM_DATA = 0x3C0
+        }
+
+        [Flags]
+        public enum WaveOpenFlags
+        {
+            None = 0,
+            FormatQuery = 0x0001,
+            AllowSync = 0x0002,
+            Mapped = 0x0004,
+            FormatDirect = 0x0008,
+            Null = 0x00000000,      /* no callback */
+            Window = 0x00010000,    /* dwCallback is a HWND */
+            Thread = 0x00020000,    /* dwCallback is a THREAD */
+            Function = 0x00030000,  /* dwCallback is a FARPROC */
+            Event = 0x00050000      /* dwCallback is an EVENT Handle */
+        }
+
+        public const int MM_WOM_OPEN = 0x3BB;
+        public const int MM_WOM_CLOSE = 0x3BC;
+        public const int MM_WOM_DONE = 0x3BD;
+
+        public const int MM_WIM_OPEN = 0x3BE;
+        public const int MM_WIM_CLOSE = 0x3BF;
+        public const int MM_WIM_DATA = 0x3C0;
+
+        public const int TIME_MS = 0x0001;  // time in milliseconds 
+        public const int TIME_SAMPLES = 0x0002;  // number of wave samples 
+        public const int TIME_BYTES = 0x0004;  // current byte offset 
+
+        public const int SND_ASYNC = 0x1;
+        public const int SND_LOOP = 0x8;
+
+        private void stoprecording()
+        {
+            try
+            {
+                recording = false;
+                waveInStop(phwi);
+                for (int i = 0; i < buffers.Length; i++)
+                {
+                    waveInUnprepareHeader(phwi, buffers[i], Marshal.SizeOf(buffers[i]));
+                    buffers[i].Dispose();
+                }
+                waveInClose(phwi);
+                _mp3writer.Close();
+            }
+            catch (Exception e)
+            {
+                logerror(e);
+            }
+        }
+
+        public void startrecoding()
+        {
+            WaveInDelegate callbackm = new WaveInDelegate(myDelegate);
+            memStream = new MemoryStream();
+            waveStream = new MemoryStream();
+            bytesread = 0;
+            waveformat = new WaveFormat(44100, 16, 2);
+            BE_CONFIG _mp3config = new BE_CONFIG(waveformat);
+            _mp3writer = new Mp3Writer(memStream, waveformat, _mp3config);                
+            recording = true;
+            ThrowExceptionForError(waveInOpen(out phwi, 0, waveformat, callbackm, IntPtr.Zero, WaveOpenFlags.Function));
+            int buffsize = waveformat.AverageBytesPerSecond / 8;
+            for (int i = 0; i < buffers.Length; i++)
+            {
+                buffers[i] = new WAVEHDR(buffsize);
+                buffhandles[i] = GCHandle.Alloc(buffers[i], GCHandleType.Pinned);
+                ThrowExceptionForError(waveInPrepareHeader(phwi, buffers[i], Marshal.SizeOf(buffers[i])));
+                ThrowExceptionForError(waveInAddBuffer(phwi, buffhandles[i].AddrOfPinnedObject(), Marshal.SizeOf(typeof(WaveHdr))));
+            }                
+            ThrowExceptionForError(waveInStart(phwi));
+        }
+
+        private static void loginfo(String s)
+        {
+            EventSourceCreationData eventData = new EventSourceCreationData("WebDesktop", "Application");
+            if (!EventLog.SourceExists("WebDesktop"))
+                EventLog.CreateEventSource(eventData);
+            EventLog eLog = new EventLog();
+            eLog.Source = "WebDesktop";
+            eLog.WriteEntry(s, EventLogEntryType.Information);
+        }
+
+        private static void logerror(Exception e)
+        {
+            EventSourceCreationData eventData = new EventSourceCreationData("WebDesktop", "Application");
+            if (!EventLog.SourceExists("WebDesktop"))
+                EventLog.CreateEventSource(eventData);
+            EventLog eLog = new EventLog();
+            eLog.Source = "WebDesktop";
+            eLog.WriteEntry(e.Message + "\n" + e.StackTrace, EventLogEntryType.Error);
+        }
+
+        public WinMM(bool microphone=false)
+        {
+            try
+            {
+                startrecoding();
+                _trd = new Thread(wavtomp3);
+                _trd.IsBackground = true;
+                _trd.Start();
+            }
+            catch (Exception e)
+            {
+                logerror(e);
+            }            
+        }
+
+        public void Dispose()
+        {
+            stoprecording();
+            _trd.Abort();
+        }
+    }
+
+    public class CoreAudio : audioCapture
     {
         private readonly Guid GuidEventContext = Guid.NewGuid();
 
@@ -232,17 +789,7 @@ namespace SoundCapture
         private Object synclock = new Object();
         private MemoryStream memStream = new MemoryStream();
 
-        private int bytesread = 0;
-
-        public static void logentry(string msg) {
-          string appName = "DesktopInteractServer";
-          EventSourceCreationData eventData = new EventSourceCreationData(appName, "Application");
-          if (!EventLog.SourceExists(appName))
-             EventLog.CreateEventSource(eventData);
-          EventLog eLog = new EventLog();
-          eLog.Source = appName;
-          eLog.WriteEntry(msg, EventLogEntryType.Information);
-        }
+        private long bytesread = 0;
 
         public byte[] readbytes()
         {
@@ -252,8 +799,8 @@ namespace SoundCapture
                 {
                     if (memStream.Length > bytesread)
                     {
-                        int oldpos = (int) memStream.Position;
-                        int toread = (int) memStream.Length - bytesread;
+                        long oldpos = memStream.Position;
+                        int toread = (int)(memStream.Length - bytesread);
                         memStream.Position = bytesread;
                         byte[] buffer = new byte[toread];
                         memStream.Read(buffer, 0, toread);
@@ -288,18 +835,6 @@ namespace SoundCapture
             keepgoing = true;
             while (keepgoing)
             {
-                //if (packetLength == 0)
-                //{
-                //    double sleeptime = 2*hnsActualDuration / 10000000;
-                //    int samplesize = (int) (waveformat.wBitsPerSample * waveformat.nChannels/8);
-                //    double space = sleeptime*waveformat.nSamplesPerSec*samplesize;
-                //    int roundedspace = ((int)(space / samplesize)) * samplesize;
-                //    pData = new byte[roundedspace];
-                //    for (int i = 0; i < pData.Length; i++)
-                //        pData[i] = 0;
-                //    wfw.Write(pData, 0, pData.Length);
-                //}
-
                 Thread.Sleep((int)(hnsActualDuration / 5000));
                 retVal=iAudioCaptureClient.GetNextPacketSize(out packetLength);
                 if (retVal!=0) {
@@ -330,9 +865,7 @@ namespace SoundCapture
 
                     lock (synclock)
                     {                        
-                        long datawritten = memStream.Length;
                         _mp3writer.Write(pData, 0, pData.Length);
-                        datawritten = memStream.Length - datawritten;
                     }
                     if (notify != null) notify();
 
@@ -469,7 +1002,6 @@ namespace SoundCapture
             }
             uint buffersize=0;
             retVal = iAudioClient.GetBufferSize(out buffersize);
-            //logentry("buffersize: " + buffersize);
             if (retVal != 0)
             {
                 throw new Exception("IAudioClient.GetBufferSize()");
@@ -487,13 +1019,12 @@ namespace SoundCapture
                 throw new Exception("COM cast failed to iAudioCaptureClient");
             }
             hnsActualDuration = (double)(REFTIMES_PER_SEC * buffersize / waveformat.nSamplesPerSec); // 8391 smallest possible value
-            //logentry("hnsActualDuration "+hnsActualDuration);
             recordingthread = new Thread(recordingloop);
             recordingthread.IsBackground = false;
             recordingthread.Start();
         }
 
-        public virtual void Dispose()
+        public void Dispose()
         {
             keepgoing = false;
             Thread.Sleep(20);
@@ -614,5 +1145,11 @@ namespace SoundCapture
             int retVal = iAudioEndpoint.VolumeStepDown(GuidEventContext);
             Marshal.ThrowExceptionForHR(retVal);
         }
+    }
+
+    public interface audioCapture
+    {
+        byte[] readbytes();
+        void Dispose();
     }
 }
