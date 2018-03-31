@@ -11,138 +11,106 @@ namespace SoundCapture
 {
     public class WinMM : audioCapture
     {
-        static private int BUFFNUM = 10;
-        static private WAVEHDR[] buffers = new WAVEHDR[BUFFNUM];
-        static private GCHandle[] buffhandles = new GCHandle[BUFFNUM];
-        static private bool recording = false;
-        static private int currentbuffer = 0;
-        static private IntPtr phwi = IntPtr.Zero;
-        static private MemoryStream memStream;
-        static private MemoryStream waveStream;
-        static private Object synclock = new Object();
-        static private Object reclock = new Object();
-        static private Mp3Writer _mp3writer;
-        static private  Thread _trd;
-        static private long wavepointer = 0;        
-        static private long bytesread = 0;
-        static private WaveFormat waveformat;
+        static public WaveHdr[] buffers = new WaveHdr[20];
+        static public IntPtr[] unmanagedHeaders = new IntPtr[20];
+        static public bool recording = false;
+        static public int currentbuffer = 0;
+        static public IntPtr phwi = IntPtr.Zero;
+        static public MemoryStream memStream;
+        static public MemoryStream waveStream;
+        static public Object synclock = new Object();
+        static public Object reclock = new Object();
+        static public Mp3Writer _mp3writer;
+        static public Thread _trd;
+        static public long wavepointer = 0;
+        static public long bytesread = 0;
+        static public WaveFormat waveformat;
+        static public AutoResetEvent syncthreads = new AutoResetEvent(false);
+        static public WaveInDelegate callbackm = new WaveInDelegate(myDelegate);
 
         public static void myDelegate(IntPtr hwo, MIWM uMsg, IntPtr dwInstance, IntPtr dwParam1, IntPtr dwParam2)
         {
-            if (recording)
+            switch (uMsg)
             {
-                try
-                {
-                    switch (uMsg)
-                    {
-                        case MIWM.WIM_OPEN:
-                            break;
-                        case MIWM.WIM_DATA:
-                            byte[] bytes = new byte[buffers[currentbuffer].dwBytesRecorded];
-                            Marshal.Copy(buffers[currentbuffer].lpData, bytes, 0, buffers[currentbuffer].dwBytesRecorded);
-                            lock (reclock)
-                            {
-                                waveStream.Write(bytes, 0, bytes.Length);
-                            }
-                            ThrowExceptionForError(waveInAddBuffer(phwi, buffhandles[currentbuffer].AddrOfPinnedObject(), Marshal.SizeOf(typeof(WaveHdr))));                            
-                            currentbuffer = (currentbuffer + 1) % BUFFNUM;
-                            break;
-                        case MIWM.WIM_CLOSE:
-                            break;
-                    }
-                }
-                catch (Exception e)
-                {
-                    logerror(e);
-                }
+                case MIWM.WIM_OPEN:
+                    break;
+                case MIWM.WIM_DATA:
+                    WinMM.syncthreads.Set();
+                    break;
+                case MIWM.WIM_CLOSE:
+                    break;
             }
         }
 
-        static int readcounter = 0;
         public byte[] readbytes()
         {
-            if (recording)
+            if (WinMM.recording)
             {
-                lock (synclock)
+                lock (WinMM.synclock)
                 {
-                    if (memStream.Length > bytesread)
-                    {                        
-                        long oldpos = memStream.Position;
-                        int toread = (int)(memStream.Length - bytesread);
-                        memStream.Position = bytesread;
+                    if (WinMM.memStream.Length > WinMM.bytesread)
+                    {
+                        long oldpos = WinMM.memStream.Position;
+                        int toread = (int)(WinMM.memStream.Length - WinMM.bytesread);
+                        WinMM.memStream.Position = WinMM.bytesread;
                         byte[] buffer = new byte[toread];
-                        memStream.Read(buffer, 0, toread);
-                        memStream.Position = oldpos;
-                        bytesread += toread;
-                        loginfo("("+readcounter+++") mp3=" + bytesread + " wave=" + waveStream.Length);
+                        WinMM.memStream.Read(buffer, 0, toread);
+                        WinMM.memStream.Position = oldpos;
+                        WinMM.bytesread += toread;
                         return buffer;
                     }
                 }
             }
             return new byte[0];
-        }
+        }        
 
-        private void wavtomp3()
+        static public void wavtomp3()
         {
             try
             {
-                while (recording)
+                while (WinMM.recording)
                 {
-                    if (waveStream.Length > wavepointer)
-                    {                        
-                        int toread = (int)(waveStream.Length - wavepointer);
+                    WinMM.syncthreads.WaitOne();
+                    WinMM.buffers[WinMM.currentbuffer] = (WaveHdr)Marshal.PtrToStructure(WinMM.unmanagedHeaders[WinMM.currentbuffer], typeof(WaveHdr));
+                    byte[] bytes = new byte[WinMM.buffers[WinMM.currentbuffer].dwBytesRecorded];
+                    Marshal.Copy(WinMM.buffers[WinMM.currentbuffer].lpData, bytes, 0, WinMM.buffers[WinMM.currentbuffer].dwBytesRecorded);
+                    lock (WinMM.reclock)
+                    {
+                        WinMM.waveStream.Write(bytes, 0, bytes.Length);
+                    }
+                    WinMM.ThrowExceptionForError(WinMM.waveInAddBuffer(WinMM.phwi, WinMM.unmanagedHeaders[WinMM.currentbuffer], Marshal.SizeOf(typeof(WinMM.WaveHdr))));
+                    WinMM.currentbuffer = (WinMM.currentbuffer + 1) % WinMM.buffers.Length;
+
+                    if (WinMM.waveStream.Length > WinMM.wavepointer)
+                    {
+                        int toread = (int)(WinMM.waveStream.Length - WinMM.wavepointer);
                         byte[] buffer = new byte[toread];
-                        lock (reclock)
+                        lock (WinMM.reclock)
                         {
-                            long prevpos = waveStream.Position;
-                            waveStream.Position = wavepointer;
-                            waveStream.Read(buffer, 0, toread);
-                            waveStream.Position = prevpos;
-                            wavepointer += toread;
+                            long prevpos = WinMM.waveStream.Position;
+                            WinMM.waveStream.Position = WinMM.wavepointer;
+                            WinMM.waveStream.Read(buffer, 0, toread);
+                            WinMM.waveStream.Position = prevpos;
+                            WinMM.wavepointer += toread;
                         }
-                        lock (synclock)
+                        lock (WinMM.synclock)
                         {
-                            _mp3writer.Write(buffer, 0, buffer.Length);
+                            WinMM._mp3writer.Write(buffer, 0, buffer.Length);
                         }
+
                     }
                     Thread.Sleep(10);
                 }
             }
             catch (Exception e)
             {
-                logerror(e);
+                throw e;
             }
-
         }
-
 
         [StructLayout(LayoutKind.Sequential)]
         public struct WaveHdr
         {
-            public IntPtr lpData; // pointer to locked data buffer
-            public int dwBufferLength; // length of data buffer
-            public int dwBytesRecorded; // used for input only
-            public IntPtr dwUser; // for client's use
-            public int dwFlags; // assorted flags (see defines)
-            public int dwLoops; // loop control counter
-            public IntPtr lpNext; // PWaveHdr, reserved for driver
-            public int reserved; // reserved for driver
-        }
-
-        [StructLayout(LayoutKind.Sequential), UnmanagedName("WAVEHDR")]
-        public class WAVEHDR : IDisposable
-        {
-            [Flags]
-            public enum WHDR
-            {
-                None = 0x0,
-                Done = 0x00000001,
-                Prepared = 0x00000002,
-                BeginLoop = 0x00000004,
-                EndLoop = 0x00000008,
-                InQueue = 0x00000010
-            }
-
             public IntPtr lpData;
             public int dwBufferLength;
             public int dwBytesRecorded;
@@ -150,31 +118,18 @@ namespace SoundCapture
             public WHDR dwFlags;
             public int dwLoops;
             public IntPtr lpNext;
-            public IntPtr Reserved;
+            public IntPtr reserved;
+        }
 
-            public WAVEHDR(int iMaxSize)
-            {
-                lpData = Marshal.AllocCoTaskMem(iMaxSize);
-                dwBufferLength = iMaxSize;
-                dwUser = IntPtr.Zero;
-                dwFlags = WHDR.None;
-                dwLoops = 0;
-                lpNext = IntPtr.Zero;
-                Reserved = IntPtr.Zero;
-            }
-
-            #region IDisposable Members
-
-            public void Dispose()
-            {
-                if (lpData != IntPtr.Zero)
-                {
-                    Marshal.FreeCoTaskMem(lpData);
-                    lpData = IntPtr.Zero;
-                }
-            }
-
-            #endregion
+        [Flags]
+        public enum WHDR
+        {
+            None = 0x0,
+            Done = 0x00000001,
+            Prepared = 0x00000002,
+            BeginLoop = 0x00000004,
+            EndLoop = 0x00000008,
+            InQueue = 0x00000010
         }
 
         public enum MMRESULT : int
@@ -346,7 +301,6 @@ namespace SoundCapture
         {
             public int cbStruct;
             public int dwLineID;
-
             public int dwControl;
             public int cControls;
             public int cbmxctrl;
@@ -390,13 +344,13 @@ namespace SoundCapture
 
         // WaveOut calls
         [DllImport("winmm.dll", SetLastError = true)]
-        public static extern int waveOutPrepareHeader(IntPtr hWaveOut, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveOutHdr, int uSize);
+        public static extern int waveOutPrepareHeader(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int uSize);
         [DllImport("winmm.dll", SetLastError = true)]
-        public static extern int waveOutUnprepareHeader(IntPtr hWaveOut, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveOutHdr, int uSize);
+        public static extern int waveOutUnprepareHeader(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int uSize);
         [DllImport("winmm.dll", SetLastError = true)]
-        public static extern int waveOutWrite(IntPtr hWaveOut, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveOutHdr, int uSize);
+        public static extern int waveOutWrite(IntPtr hWaveOut,IntPtr lpWaveOutHdr, int uSize);
         [DllImport("winmm.dll", SetLastError = true)]
-        public static extern int waveOutOpen(out IntPtr hWaveOut, int uDeviceID, WaveFormat lpFormat, WaveInDelegate dwCallback, int dwInstance, int dwFlags);
+        public static extern int waveOutOpen(out IntPtr hWaveOut, int uDeviceID, [In, MarshalAs(UnmanagedType.LPStruct)] WaveFormat lpFormat, WaveInDelegate dwCallback, int dwInstance, int dwFlags);
         [DllImport("winmm.dll", SetLastError = true)]
         public static extern int waveOutReset(IntPtr hWaveOut);
         [DllImport("winmm.dll", SetLastError = true)]
@@ -413,16 +367,16 @@ namespace SoundCapture
         public static extern int waveOutGetVolume(IntPtr hWaveOut, out int dwVolume);
 
         // WaveIn calls
-        [DllImport("winmm.dll", SetLastError = true)]
-        public static extern int waveInAddBuffer(IntPtr hwi, IntPtr pwh, int cbwh);
+        [DllImport("winmm.dll", SetLastError = true), SuppressUnmanagedCodeSecurity]
+        public static extern int waveInAddBuffer(IntPtr hwi, IntPtr lpWaveInHdr, int cbwh);
         [DllImport("winmm.dll", SetLastError = true)]
         public static extern int waveInClose(IntPtr hwi);
         [DllImport("winmm.dll", EntryPoint = "waveInOpen"), SuppressUnmanagedCodeSecurity]
         public static extern int waveInOpen(out IntPtr phwi, int uDeviceID, [In, MarshalAs(UnmanagedType.LPStruct)] WaveFormat lpFormat, WaveInDelegate dwCallback, IntPtr dwInstance, WaveOpenFlags dwFlags);
-        [DllImport("winmm.dll", SetLastError = true)]
-        public static extern int waveInPrepareHeader(IntPtr hWaveIn, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveInHdr, int uSize);
-        [DllImport("winmm.dll", SetLastError = true)]
-        public static extern int waveInUnprepareHeader(IntPtr hWaveIn, [In, Out, MarshalAs(UnmanagedType.LPStruct)] WAVEHDR lpWaveInHdr, int uSize);
+        [DllImport("winmm.dll", SetLastError = true), SuppressUnmanagedCodeSecurity]
+        public static extern int waveInPrepareHeader(IntPtr hWaveIn, IntPtr lpWaveInHdr, int uSize);
+        [DllImport("winmm.dll", SetLastError = true), SuppressUnmanagedCodeSecurity]
+        public static extern int waveInUnprepareHeader(IntPtr hWaveIn, IntPtr lpWaveInHdr, int uSize);
         [DllImport("winmm.dll", SetLastError = true)]
         public static extern int waveInReset(IntPtr hwi);
         [DllImport("winmm.dll", SetLastError = true)]
@@ -442,7 +396,6 @@ namespace SoundCapture
                 throw new Exception(foo.ToString());
             }
         }
-
 
         public enum MIWM
         {
@@ -481,87 +434,87 @@ namespace SoundCapture
         public const int SND_ASYNC = 0x1;
         public const int SND_LOOP = 0x8;
 
-        private void stoprecording()
+        public static void stoprecording()
         {
             try
             {
-                recording = false;
-                waveInStop(phwi);
-                for (int i = 0; i < buffers.Length; i++)
+                WinMM.recording = false;
+                for (int i = 0; i < WinMM.unmanagedHeaders.Length; i++)
                 {
-                    waveInUnprepareHeader(phwi, buffers[i], Marshal.SizeOf(buffers[i]));
-                    buffers[i].Dispose();
+                    WinMM.buffers[i] = (WaveHdr)Marshal.PtrToStructure(WinMM.unmanagedHeaders[i], typeof(WinMM.WaveHdr));
+                    int count = 0;
+                    while (WinMM.waveInUnprepareHeader(WinMM.phwi, WinMM.unmanagedHeaders[i], Marshal.SizeOf(typeof(WinMM.WaveHdr))) != 0 && count++ < 10)
+                    {
+                        Thread.Sleep(2);
+                    }
+                    Marshal.FreeHGlobal(WinMM.buffers[i].lpData);
+                    Marshal.DestroyStructure(WinMM.unmanagedHeaders[i], typeof(WinMM.WaveHdr));
                 }
-                waveInClose(phwi);
-                _mp3writer.Close();
+                if (WinMM.phwi != IntPtr.Zero)
+                {
+                    WinMM.waveInStop(WinMM.phwi);
+                    WinMM.waveInClose(WinMM.phwi);
+                }
+                WinMM._mp3writer.Flush();
+                WinMM._mp3writer.Close();
             }
             catch (Exception e)
             {
-                logerror(e);
+                throw (e);
+                //WinMM.logerror(e);
             }
-        }
+        }        
 
-        public void startrecoding()
+        static public void startrecoding()
         {
-            WaveInDelegate callbackm = new WaveInDelegate(myDelegate);
-            memStream = new MemoryStream();
-            waveStream = new MemoryStream();
-            bytesread = 0;
-            waveformat = new WaveFormat(44100, 16, 2);
-            BE_CONFIG _mp3config = new BE_CONFIG(waveformat);
-            _mp3writer = new Mp3Writer(memStream, waveformat, _mp3config);                
-            recording = true;
-            ThrowExceptionForError(waveInOpen(out phwi, 0, waveformat, callbackm, IntPtr.Zero, WaveOpenFlags.Function));
-            int buffsize = waveformat.AverageBytesPerSecond / 8;
-            for (int i = 0; i < buffers.Length; i++)
+            try {
+
+                WinMM.memStream = new MemoryStream();
+                WinMM.waveStream = new MemoryStream();
+                WinMM.bytesread = 0;
+                WinMM.waveformat = new WaveFormat(44100, 16, 2);
+                BE_CONFIG _mp3config = new BE_CONFIG(waveformat);
+                WinMM._mp3writer = new Mp3Writer(memStream, waveformat, _mp3config);
+                WinMM.recording = true;
+                WinMM._trd = new Thread(WinMM.wavtomp3);
+                WinMM._trd.IsBackground = true;
+                WinMM._trd.Start();
+                WinMM.ThrowExceptionForError(WinMM.waveInOpen(out WinMM.phwi, 0, WinMM.waveformat, WinMM.callbackm, IntPtr.Zero, WinMM.WaveOpenFlags.Function));
+                int buffsize = WinMM.waveformat.AverageBytesPerSecond / 100;
+                for (int i = 0; i < WinMM.buffers.Length; i++)
+                {
+                    WinMM.buffers[i] = new WinMM.WaveHdr();
+                    WinMM.buffers[i].lpData = Marshal.AllocHGlobal(buffsize);
+                    WinMM.buffers[i].dwBufferLength = buffsize;
+                    WinMM.buffers[i].dwUser = IntPtr.Zero;
+                    WinMM.buffers[i].dwFlags = WinMM.WHDR.None;
+                    WinMM.buffers[i].dwLoops = 0;
+                    WinMM.buffers[i].lpNext = IntPtr.Zero;
+                    WinMM.buffers[i].reserved = IntPtr.Zero;
+                    WinMM.unmanagedHeaders[i] = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(WinMM.WaveHdr)));
+                    Marshal.StructureToPtr(WinMM.buffers[i], WinMM.unmanagedHeaders[i], false);
+                    WinMM.ThrowExceptionForError(WinMM.waveInPrepareHeader(WinMM.phwi, WinMM.unmanagedHeaders[i], Marshal.SizeOf(typeof(WinMM.WaveHdr))));
+                    WinMM.ThrowExceptionForError(WinMM.waveInAddBuffer(WinMM.phwi, WinMM.unmanagedHeaders[i], Marshal.SizeOf(typeof(WinMM.WaveHdr))));
+                }
+                WinMM.ThrowExceptionForError(WinMM.waveInStart(WinMM.phwi));
+            }
+            catch (Exception e)
             {
-                buffers[i] = new WAVEHDR(buffsize);
-                buffhandles[i] = GCHandle.Alloc(buffers[i], GCHandleType.Pinned);
-                ThrowExceptionForError(waveInPrepareHeader(phwi, buffers[i], Marshal.SizeOf(buffers[i])));
-                ThrowExceptionForError(waveInAddBuffer(phwi, buffhandles[i].AddrOfPinnedObject(), Marshal.SizeOf(typeof(WaveHdr))));
-            }                
-            ThrowExceptionForError(waveInStart(phwi));
-        }
+                throw e;
+            }            
 
-        private static void loginfo(String s)
-        {
-            EventSourceCreationData eventData = new EventSourceCreationData("WebDesktop", "Application");
-            if (!EventLog.SourceExists("WebDesktop"))
-                EventLog.CreateEventSource(eventData);
-            EventLog eLog = new EventLog();
-            eLog.Source = "WebDesktop";
-            eLog.WriteEntry(s, EventLogEntryType.Information);
-        }
-
-        private static void logerror(Exception e)
-        {
-            EventSourceCreationData eventData = new EventSourceCreationData("WebDesktop", "Application");
-            if (!EventLog.SourceExists("WebDesktop"))
-                EventLog.CreateEventSource(eventData);
-            EventLog eLog = new EventLog();
-            eLog.Source = "WebDesktop";
-            eLog.WriteEntry(e.Message + "\n" + e.StackTrace, EventLogEntryType.Error);
         }
 
         public WinMM(bool microphone=false)
         {
-            try
-            {
-                startrecoding();
-                _trd = new Thread(wavtomp3);
-                _trd.IsBackground = true;
-                _trd.Start();
-            }
-            catch (Exception e)
-            {
-                logerror(e);
-            }            
+            WinMM.startrecoding();
         }
 
         public void Dispose()
         {
-            stoprecording();
-            _trd.Abort();
+            WinMM.stoprecording();
+            Thread.Sleep(50);
+            WinMM._trd.Abort();
         }
     }
 

@@ -1,0 +1,4 @@
+C:\web\windows\bin\WebDesktop\SoundCapture\bin\x86\Release\SoundCapture.dll
+C:\web\windows\bin\WebDesktop\SoundCapture\bin\x86\Release\SoundCapture.pdb
+C:\web\windows\bin\WebDesktop\SoundCapture\obj\x86\Release\SoundCapture.dll
+C:\web\windows\bin\WebDesktop\SoundCapture\obj\x86\Release\SoundCapture.pdb

@@ -153,8 +153,7 @@ Module WebDesktop
             If restart Then
                 restart = False
                 Dim filePath As String = System.Reflection.Assembly.GetExecutingAssembly().EscapedCodeBase
-                filePath = (filePath.Substring(filePath.IndexOf("file:///") + 8)).Replace("\", "/")
-                log("restart attempt " & filePath)
+                filePath = (filePath.Substring(filePath.IndexOf("file:///") + 8)).Replace("\", "/").Replace("%20", " ")
                 Dim Info As ProcessStartInfo = New ProcessStartInfo()
                 Info.Arguments = "/C ping 127.0.0.1 -n 2 & """ & filePath & """"
                 Info.WindowStyle = ProcessWindowStyle.Hidden
@@ -841,8 +840,7 @@ Module WebDesktop
                 End Try
                 If enableaudio Then
                     Try
-                        '_snd = New CoreAudio(microphone)
-                        _snd = New WinMM(microphone)
+                        _snd = New CoreAudio(microphone)
                     Catch ex As Exception
                         Try
                             _snd = New WinMM(microphone)
