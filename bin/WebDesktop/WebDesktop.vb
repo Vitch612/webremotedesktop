@@ -76,7 +76,9 @@ Module WebDesktop
                         match = samples.Item(i)
                     End If
                 Else
-                    match = samples.Item(i)                
+                    If bufferingtime - ts1.TotalMilliseconds <= 0 Then
+                        match = samples.Item(i)
+                    End If
                 End If
             Next
             If match Is Nothing Then
@@ -152,8 +154,8 @@ Module WebDesktop
 
             If restart Then
                 restart = False
-                Dim filePath As String = System.Reflection.Assembly.GetExecutingAssembly().EscapedCodeBase
-                filePath = (filePath.Substring(filePath.IndexOf("file:///") + 8)).Replace("\", "/").Replace("%20", " ")
+                Dim filePath As String = System.Reflection.Assembly.GetExecutingAssembly().CodeBase
+                filePath = (filePath.Substring(filePath.IndexOf("file:///") + 8)).Replace("\", "/")
                 Dim Info As ProcessStartInfo = New ProcessStartInfo()
                 Info.Arguments = "/C ping 127.0.0.1 -n 2 & """ & filePath & """"
                 Info.WindowStyle = ProcessWindowStyle.Hidden
@@ -763,12 +765,12 @@ Module WebDesktop
         Private Sub ThreadTask()
             Try
                 Dim addresses As System.Net.IPAddress() = System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName())
-                For Each ip As System.Net.IPAddress In addresses
-                    If ip.AddressFamily = AddressFamily.InterNetwork Then
-                        _httpListener.Prefixes.Add("http://" & ip.ToString() & ":" & port & "/")
-                    End If
-                Next
-                _httpListener.Prefixes.Add("http://localhost:" & port & "/")
+                'For Each ip As System.Net.IPAddress In addresses
+                '    If ip.AddressFamily = AddressFamily.InterNetwork Then
+                '        _httpListener.Prefixes.Add("http://" & ip.ToString() & ":" & port & "/")
+                '    End If
+                'Next
+                '_httpListener.Prefixes.Add("http://localhost:" & port & "/")
                 _httpListener.Prefixes.Add("http://*:" & port & "/")
                 _httpListener.Prefixes.Add("http://+:" & port & "/")
                 _httpListener.Start()
