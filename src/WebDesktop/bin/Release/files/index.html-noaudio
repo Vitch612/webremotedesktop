@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="stylesheet" type="text/css" href="/styles.css">
+  <script type="text/javascript" src="/jquery.min.js"></script>
+  <script type="text/javascript" src="/interactions.js"></script>
+<script>
+</script>
+</head>
+<body style="padding:0;margin:0;z-index:50;">
+<div class="message"></div>
+<div class="controls">
+  <div class="settingsbutton">
+  <img class="opensettings" src="/settings.png"/>
+  </div>
+  <span class="formheader">Volume</span>
+  <input class="btnmute formelement" type="button" value="&#128266;"><BR>
+  <input class="btnvolup formelement" type="button" value="&#x25B2;"><BR>
+  <input class="btnvoldown formelement" type="button" value="&#x25BC;"><BR>
+  <span class="formheader">Mouse Button</span>
+  <input class="mousebutton formelement" type="radio" name="mousebutton" value="mouseleft" checked>left<BR>
+  <input class="mousebutton formelement" type="radio" name="mousebutton" value="mouseright">right<BR>
+  <span class="formheader">Mouse Click</span>
+  <input class="mouseclick formelement" type="radio" name="mouseclick" value="singleclick" checked>Simple<BR>
+  <input class="mouseclick formelement" type="radio" name="mouseclick" value="doubleclick">Double<BR>
+  <span class="formheader">Send Text</span>
+  <textarea class="texttosend formelement"></textarea><BR>
+  <input class="sendtext formelement" type="button" value="Send">&nbsp;&nbsp;<input class="sendback formelement" type="button" value="Backspace"><BR>
+  <input class="drawfps formelement" type="checkbox">Show FPS<BR>
+  <input class="hidecontrols formelement" type="button" value="Hide">
+</div>
+<div class="content" style="padding:0;margin:0;text-align:center;">
+  <div class="cvdiv">
+    <div class="settings">
+    <img class="closesettings" src="/close.png"/>
+    <form name="savesettings" action="/savesettings" method="GET">
+    <div class="inputrow">
+<div class="inputcol1">
+      <div class="inputlabel">
+      Audio Enabled
+      </div>
+      <div class="inputlabel">
+      Record From Microphone
+      </div>
+      <div class="inputlabel">
+      Audio Buffering
+      </div>
+      <div class="inputlabel">
+      Inactivity Timeout
+      </div>
+      <div class="inputlabel">
+      Listening Port
+      </div>
+      <div class="inputlabel">
+      Screen Resolution
+      </div>
+      <div class="inputlabel">
+      Application Log Level
+      </div>
+    </div>
+    <div class="inputcol2">
+      <div class="inputfield">
+      <input class="inputchk" type="checkbox" name="Audio" {audio}/>
+      </div>
+      <div class="inputfield">
+      <input class="inputchk" type="checkbox" name="Microphone" {microphone}/>
+      </div>
+      <div class="inputfield">
+      <input class="input" type="number" name="Buffering" value="{buffering}" min="0" step="1" pattern="\d+"/>
+      </div>
+      <div class="inputfield">
+      <input class="input" type="number" name="Timeout" value="{timeout}" min="0" step="1" pattern="\d+"/>
+      </div>
+      <div class="inputfield">
+      <input class="input" type="number" name="Port" value="{port}" min="50" max="65535" step="1" pattern="\d+"/>
+      </div>
+      <div class="inputfield">
+      <input class="input" type="number" name="Resolution" value="{resolution}" min="0" max="100" step="1" pattern="\d+"/>
+      </div>
+      <div class="inputfield">
+      <input class="input" type="number" name="LogLevel" value="{loglevel}" min="0" max="2" step="1" pattern="\d+"/>
+      </div>
+    </div>
+    </div>
+    <div class="inputrow">
+      <input type="Button" value="Save" name="Save"/>
+      <input type="Button" value="Restart" name="Restart"/>
+      <input type="Button" value="Shutdown" name="Shutdown"/>
+    </div>
+    </form>
+    </div>
+    <canvas class="overlay"></canvas>
+    <img id="mousepointer" src="/cursor.png" style="z-index:0;position:absolute;">
+    <img class="first" src=""/><img class="second" src="">
+  </div>
+</div>
+</body>
+</html>
