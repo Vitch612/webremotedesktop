@@ -4,7 +4,7 @@ $com->runprocess(str_replace("/","\\",substr($_SERVER["SCRIPT_FILENAME"],0,strrp
 sleep(1);
 $base=substr($_SERVER["PHP_SELF"],0,strpos($_SERVER["PHP_SELF"],"/",1));
 $applicationfolder=substr($_SERVER["SCRIPT_FILENAME"],0,strrpos($_SERVER["SCRIPT_FILENAME"],"/"));
-$config=file_get_contents("$applicationfolder/bin/files/config.ini", $use_include_path);
+$config=file_get_contents("$applicationfolder/bin/files/config.ini");
 $port=substr($config,strpos($config,"Port=")+5,strpos($config,"\n",strpos($config,"Port=")+5)-strpos($config,"Port=")-6);
 header("Location: http://".$_SERVER["SERVER_NAME"].":$port/");
 die('<!doctype html>
