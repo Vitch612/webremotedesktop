@@ -4,6 +4,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
+  <meta content='width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no' name='viewport' id="viewportmeta" />
   <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
   <link rel="stylesheet" type="text/css" href="/styles.css">
   <script type="text/javascript" src="/jquery.min.js"></script>
@@ -13,6 +14,8 @@
 </head>
 <body style="padding:0;margin:0;z-index:50;">
 <div class="message"></div>
+<div class="maincontainer">
+<div class="controlcontainer">
 <div class="controls">
   <div class="settingsbutton">
   <img class="opensettings" src="/settings.png"/>
@@ -31,7 +34,9 @@
   <textarea class="texttosend formelement"></textarea><BR>
   <input class="sendtext formelement" type="button" value="Send">&nbsp;&nbsp;<input class="sendback formelement" type="button" value="Backspace"><BR>
   <input class="drawfps formelement" type="checkbox">Show FPS<BR>
+  <input class="allowzoom formelement" type="checkbox">Zoom<BR>
   <input class="hidecontrols formelement" type="button" value="Hide">
+</div>
 </div>
 <div class="content" style="padding:0;margin:0;text-align:center;">
   <div class="cvdiv">
@@ -97,6 +102,7 @@
     <img id="mousepointer" src="/cursor.png" style="z-index:0;position:absolute;">
     <img class="first" src=""/><img class="second" src="">
   </div>
+</div>
 </div>
 </body>
 </html>

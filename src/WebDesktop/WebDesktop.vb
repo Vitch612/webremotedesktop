@@ -483,7 +483,33 @@ Module WebDesktop
                         Thread.Sleep(10)
                         user = FindUser(userid)
                     End While
-                ElseIf context.Request.RawUrl.Equals("/audio.html") Or context.Request.RawUrl.Equals("/cursor.png") Or context.Request.RawUrl.Equals("/favicon.ico") Or context.Request.RawUrl.Equals("/jquery.min.js") Or context.Request.RawUrl.Equals("/styles.css") Or context.Request.RawUrl.Equals("/close.png") Or context.Request.RawUrl.Equals("/settings.png") Or context.Request.RawUrl.Equals("/interactions.js") Or context.Request.RawUrl.Equals("/audio.js") Then
+                ElseIf context.Request.RawUrl.Equals("/audio.html") Then
+                    Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
+                    filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "\files").Replace("\", "/")
+                    Dim index As String = File.ReadAllText(filePath & context.Request.RawUrl)
+                    If enableaudio Then
+                        index = index.Replace("{audio}", "checked")
+                    Else
+                        index = index.Replace("{audio}", "")
+                    End If
+                    If microphone Then
+                        index = index.Replace("{microphone}", "checked")
+                    Else
+                        index = index.Replace("{microphone}", "")
+                    End If
+                    index = index.Replace("{timeout}", idletime)
+                    index = index.Replace("{port}", port)
+                    index = index.Replace("{resolution}", imageresolution)
+                    index = index.Replace("{loglevel}", loglevel)
+                    index = index.Replace("{buffering}", bufferingtime)
+                    index = index.Replace("{randomstring}", getrandomstring())
+
+                    Dim buffer As Byte() = System.Text.Encoding.ASCII.GetBytes(index)
+                    response.StatusCode = 200
+                    response.StatusDescription = "OK"
+                    response.ContentType = getmimetype(context.Request.RawUrl)
+                    outstream.Write(buffer, 0, buffer.Length)
+                ElseIf context.Request.RawUrl.Equals("/cursor.png") Or context.Request.RawUrl.Equals("/favicon.ico") Or context.Request.RawUrl.Equals("/jquery.min.js") Or context.Request.RawUrl.Equals("/styles.css") Or context.Request.RawUrl.Equals("/close.png") Or context.Request.RawUrl.Equals("/settings.png") Or context.Request.RawUrl.Equals("/interactions.js") Or context.Request.RawUrl.Equals("/audio.js") Or context.Request.RawUrl.Equals("/nodisplay.js") Then
                     Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
                     filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "\files").Replace("\", "/")
                     Dim buffer As Byte() = File.ReadAllBytes(filePath & context.Request.RawUrl)
@@ -570,12 +596,10 @@ Module WebDesktop
                                 outstream.Write(buffer, 0, buffer.Length)
                             End Try
                         Else
-                            Dim filePath As String = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase)
-                            filePath = (filePath.Substring(filePath.IndexOf("file:\\") + 7) & "/files/error.png").Replace("\", "/")
-                            Dim buffer As Byte() = File.ReadAllBytes(filePath)
+                            Dim buffer As Byte() = Functionality.getScreenshot(w, h, imageresolution)
                             response.StatusCode = 200
                             response.StatusDescription = "OK"
-                            response.ContentType = "image/png"
+                            response.ContentType = "image/jpeg"
                             outstream.Write(buffer, 0, buffer.Length)
                         End If
                     ElseIf requesturl.Equals("/savesettings") Then
@@ -765,12 +789,12 @@ Module WebDesktop
         Private Sub ThreadTask()
             Try
                 Dim addresses As System.Net.IPAddress() = System.Net.Dns.GetHostAddresses(System.Net.Dns.GetHostName())
-                'For Each ip As System.Net.IPAddress In addresses
-                '    If ip.AddressFamily = AddressFamily.InterNetwork Then
-                '        _httpListener.Prefixes.Add("http://" & ip.ToString() & ":" & port & "/")
-                '    End If
-                'Next
-                '_httpListener.Prefixes.Add("http://localhost:" & port & "/")
+                For Each ip As System.Net.IPAddress In addresses
+                    If ip.AddressFamily = AddressFamily.InterNetwork Then
+                        _httpListener.Prefixes.Add("http://" & ip.ToString() & ":" & port & "/")
+                    End If
+                Next
+                _httpListener.Prefixes.Add("http://localhost:" & port & "/")
                 _httpListener.Prefixes.Add("http://*:" & port & "/")
                 _httpListener.Prefixes.Add("http://+:" & port & "/")
                 _httpListener.Start()

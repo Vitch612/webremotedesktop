@@ -1,5 +1,10 @@
 body {
   background-color:black;
+  overflow:auto;
+  width:fit-content;
+  height:fit-content;
+  min-width:100%;
+  min-height:100%;
 }
 .mediadiv {
   display:none;
@@ -77,9 +82,18 @@ body {
   margin-right:5px;
   margin-top:5px;
 }
+.controlcontainer {
+  position:fixed;
+  top:0;
+  left:0;
+  overflow:auto;
+  z-index:20;
+  max-height:100vh;
+}
 .controls {
-  position:absolute;
-  padding-left:5px;
+  position:relative;
+  padding-left:10px;
+  padding-right:5px;
   width:100px;
   color:lightgrey;
   background-color:#202020;
@@ -156,4 +170,13 @@ body {
 }
 .settingsbutton {
   text-align:center;
+}
+
+a.controllink:link,a.controllink:visited,a.controllink:hover,a.controllink:active  {
+  color: white;
+  font-weight:bold;
+  text-decoration:none;
+}
+.hidecontrols {
+  margin-top:10px;
 }

@@ -8,3 +8,13 @@ C:\web\windows\bin\WebDesktop\obj\Debug\WebDesktop.Resources.resources
 C:\web\windows\bin\WebDesktop\obj\Debug\WebDesktop.vbproj.GenerateResource.Cache
 C:\web\windows\bin\WebDesktop\obj\Debug\WebDesktop.exe
 C:\web\windows\bin\WebDesktop\obj\Debug\WebDesktop.pdb
+C:\web\windows\src\WebDesktop\bin\Debug\WebDesktop.exe.config
+C:\web\windows\src\WebDesktop\bin\Debug\WebDesktop.exe
+C:\web\windows\src\WebDesktop\bin\Debug\WebDesktop.pdb
+C:\web\windows\src\WebDesktop\bin\Debug\SoundCapture.dll
+C:\web\windows\src\WebDesktop\bin\Debug\SoundCapture.pdb
+C:\web\windows\src\WebDesktop\obj\Debug\WebDesktop.vbprojResolveAssemblyReference.cache
+C:\web\windows\src\WebDesktop\obj\Debug\WebDesktop.Resources.resources
+C:\web\windows\src\WebDesktop\obj\Debug\WebDesktop.vbproj.GenerateResource.Cache
+C:\web\windows\src\WebDesktop\obj\Debug\WebDesktop.exe
+C:\web\windows\src\WebDesktop\obj\Debug\WebDesktop.pdb
