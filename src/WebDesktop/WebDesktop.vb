@@ -39,6 +39,7 @@ Module WebDesktop
         Protected restart As Boolean = False
         Dim samples As List(Of samplepointer) = New List(Of samplepointer)
 
+
         Private Class samplepointer
             Public time As DateTime
             Public position As Long
@@ -70,7 +71,7 @@ Module WebDesktop
             Dim match As samplepointer
             For i As Integer = 0 To samples.Count - 1
                 ts1 = currenttime - samples.Item(i).time
-                If Not match Is Nothing Then
+                If Not (match Is Nothing) Then
                     ts2 = currenttime - match.time
                     If Math.Abs(bufferingtime - ts1.TotalMilliseconds) > Math.Abs(bufferingtime - ts2.TotalMilliseconds) Then
                         match = samples.Item(i)
@@ -116,18 +117,43 @@ Module WebDesktop
         Private Sub listcleanup()
             Dim currenttime As DateTime = Now
             Dim ts As TimeSpan
+
             For i As Integer = sessions.Count - 1 To 0 Step -1
                 ts = currenttime - sessions.Item(i).lastrequest
                 If ts.TotalSeconds > 20 Then
                     sessions.RemoveAt(i)
                 End If
             Next
+            Dim removed As Long = 0
             For i As Integer = samples.Count - 1 To 0 Step -1
                 ts = currenttime - samples.Item(i).time
-                If ts.TotalMilliseconds > 2 * bufferingtime Then
-                    samples.RemoveAt(i)
+                If ts.TotalMilliseconds > 2 * bufferingtime And memcache.Length > samples.Item(i).position Then
+                    'SyncLock locksync
+                    'Dim tempmemcache As MemoryStream = New MemoryStream()
+                    'Dim toread As Integer = memcache.Length - samples.Item(i).position - 1
+                    'Dim buffer As Byte() = New Byte(toread - 1) {}
+                    'Dim prevpos = memcache.Position
+                    'memcache.Position = samples.Item(i).position
+                    'memcache.Read(buffer, 0, toread)
+                    'removed = memcache.Length - toread
+                    'tempmemcache.Write(buffer, 0, toread)
+                    'memcache.Dispose()
+                    'memcache = tempmemcache
+                    samples.RemoveRange(0, i)
+                    'End SyncLock
+                    Exit For
                 End If
             Next
+            'If removed > 0 Then
+            '    totalremoved += removed
+            '    For i As Integer = samples.Count - 1 To 0 Step -1
+            '        samples.Item(i).position = samples.Item(i).position - removed
+            '    Next
+            'For i As Integer = 0 To sessions.Count - 1
+            '    sessions.Item(i).lastpos = If(sessions.Item(i).lastpos - removed > 0, sessions.Item(i).lastpos - removed, 0)
+            '    sessions.Item(i).startpos = If(sessions.Item(i).startpos - removed > 0, sessions.Item(i).startpos - removed, 0)
+            'Next
+            'End If
         End Sub
 
         Private Sub stopall(Optional ByVal waittime As Integer = 50)
@@ -316,11 +342,11 @@ Module WebDesktop
                     'response.AddHeader("Content-Disposition", "attachment; filename=""audio.mp3""")
                     sessions.Item(user).lastpos = sessions.Item(user).startpos + buffer.Length
                     outstream.Write(tmpbuffer, 0, tmpbuffer.Length)
-                    loginfo(New String(,) {{"Normal Response", ""}, _
-                                           {"userid ", user}, _
-                                           {"readfrom", sessions.Item(user).startpos}, _
-                                           {"bytesread", buffer.Length}, _
-                                           {"currentbuffer", memcache.Length}, _
+                    loginfo(New String(,) {{"Normal Response", ""},
+                                           {"userid ", user},
+                                           {"readfrom", sessions.Item(user).startpos},
+                                           {"bytesread", buffer.Length},
+                                           {"currentbuffer", memcache.Length},
                                            {"lastpos", sessions.Item(user).lastpos}}, EventLogEntryType.Information)
                 Else
                     Dim bytefroms As String = "NA"
@@ -376,16 +402,18 @@ Module WebDesktop
                             requestedbytes = byteto - bytefrom + 1
                         End If
                     End If
+
                     If bytefrom <> 0 Then
                         bytefrom -= mp3header.Length
                     End If
+
                     Dim mp3buffer As Byte() = New Byte() {}
                     If Not refuseranged Then
                         If byteto = -1 Then
-                            loginfo(New String(,) {{"Ranged - no end", ""}, _
-                                                   {"userid ", user}, _
-                                                   {"readfrom", sessions.Item(user).startpos + bytefrom}, _
-                                                   {"bytesread", (memcache.Length - sessions.Item(user).startpos - bytefrom)}, _
+                            loginfo(New String(,) {{"Ranged - no end", ""},
+                                                   {"userid ", user},
+                                                   {"readfrom", sessions.Item(user).startpos + bytefrom},
+                                                   {"bytesread", (memcache.Length - sessions.Item(user).startpos - bytefrom)},
                                                    {"currentbuffer", memcache.Length}})
                             If memcache.Length - sessions.Item(user).startpos - bytefrom > 0 Then
                                 mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, memcache.Length - sessions.Item(user).startpos - bytefrom)
@@ -394,17 +422,17 @@ Module WebDesktop
                             End If
                         ElseIf requestedbytes > 0 Then
                             If memcache.Length - sessions.Item(user).startpos - bytefrom > requestedbytes Then
-                                loginfo(New String(,) {{"Ranged - with end - can send requested", ""}, _
-                                                       {"userid ", user}, _
-                                                       {"readfrom", sessions.Item(user).startpos + bytefrom}, _
-                                                       {"bytesread", requestedbytes}, _
+                                loginfo(New String(,) {{"Ranged - with end - can send requested", ""},
+                                                       {"userid ", user},
+                                                       {"readfrom", sessions.Item(user).startpos + bytefrom},
+                                                       {"bytesread", requestedbytes},
                                                        {"currentbuffer", memcache.Length}}, EventLogEntryType.Warning)
                                 mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, requestedbytes)
                             Else
-                                loginfo(New String(,) {{"Ranged - with end - cannot send requested", ""}, _
-                                                       {"userid ", user}, _
-                                                       {"readfrom", sessions.Item(user).startpos + bytefrom}, _
-                                                       {"bytesread", memcache.Length - sessions.Item(user).startpos - bytefrom}, _
+                                loginfo(New String(,) {{"Ranged - with end - cannot send requested", ""},
+                                                       {"userid ", user},
+                                                       {"readfrom", sessions.Item(user).startpos + bytefrom},
+                                                       {"bytesread", memcache.Length - sessions.Item(user).startpos - bytefrom},
                                                        {"currentbuffer", memcache.Length}}, EventLogEntryType.Warning)
                                 If memcache.Length - sessions.Item(user).startpos - bytefrom > 0 Then
                                     mp3buffer = getbuffer(sessions.Item(user).startpos + bytefrom, memcache.Length - sessions.Item(user).startpos - bytefrom)
@@ -441,10 +469,10 @@ Module WebDesktop
                                 sessions.Item(user).lastpos = sessions.Item(user).startpos + bytefrom + mp3buffer.Length
                                 outstream.Write(mp3buffer, 0, mp3buffer.Length)
                             End If
-                            loginfo(New String(,) {{"Ranged Response", ""}, _
-                                                   {"userid", user}, _
-                                                   {"range served", bytefrom & "-" & (datalength + bytefrom - 1) & "/" & max}, _
-                                                   {"bytes sent", mp3buffer.Length}, _
+                            loginfo(New String(,) {{"Ranged Response", ""},
+                                                   {"userid", user},
+                                                   {"range served", bytefrom & "-" & (datalength + bytefrom - 1) & "/" & max},
+                                                   {"bytes sent", mp3buffer.Length},
                                                    {"lastpos", sessions.Item(user).lastpos}})
                         Else
                             Return False
@@ -453,8 +481,8 @@ Module WebDesktop
                         response.StatusCode = 416
                         response.StatusDescription = "Requested range not satisfiable"
                         response.AddHeader("Content-Range", "bytes */" & (memcache.Length - sessions.Item(user).startpos + mp3header.Length - 1))
-                        loginfo(New String(,) {{"Ranged Refused", ""}, _
-                                               {"userid", user}, _
+                        loginfo(New String(,) {{"Ranged Refused", ""},
+                                               {"userid", user},
                                                {"range suggested", "bytes */" & (memcache.Length - sessions.Item(user).startpos + mp3header.Length - 1)}}, EventLogEntryType.Warning)
                     End If
                 End If
@@ -882,13 +910,13 @@ Module WebDesktop
                         getsoundthread.Start()
                     End If
                 End If
-            httplistenthread = New Thread(AddressOf ThreadTask)
-            httplistenthread.IsBackground = False
-            httplistenthread.Start()
-            timer = Now
-            watchfortimeout = New Thread(AddressOf timerThread)
-            watchfortimeout.IsBackground = True
-            watchfortimeout.Start()
+                httplistenthread = New Thread(AddressOf ThreadTask)
+                httplistenthread.IsBackground = False
+                httplistenthread.Start()
+                timer = Now
+                watchfortimeout = New Thread(AddressOf timerThread)
+                watchfortimeout.IsBackground = True
+                watchfortimeout.Start()
             Catch ex As Exception
                 log("[Init Application]" & Environment.NewLine & ex.Message & Environment.NewLine & ex.StackTrace)
             End Try
@@ -1145,7 +1173,7 @@ Module WebDesktop
                 Public bottom As Integer
             End Structure
 
-            Public Const KEYEVENTF_KEYUP As UInt32 = &H2            
+            Public Const KEYEVENTF_KEYUP As UInt32 = &H2
             Public Declare Function GetDesktopWindow Lib "user32.dll" () As IntPtr
             Public Declare Function GetWindowDC Lib "user32.dll" (ByVal hWnd As IntPtr) As IntPtr
             Public Declare Function ReleaseDC Lib "user32.dll" (ByVal hWnd As IntPtr, ByVal hDC As IntPtr) As IntPtr

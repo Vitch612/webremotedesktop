@@ -27,6 +27,7 @@ namespace SoundCapture
         static public WaveFormat waveformat;
         static public AutoResetEvent syncthreads = new AutoResetEvent(false);
         static public WaveInDelegate callbackm = new WaveInDelegate(myDelegate);
+        static public int maxstreamlength = 1000000;
 
         public static void myDelegate(IntPtr hwo, MIWM uMsg, IntPtr dwInstance, IntPtr dwParam1, IntPtr dwParam2)
         {
@@ -77,6 +78,23 @@ namespace SoundCapture
                     lock (WinMM.reclock)
                     {
                         WinMM.waveStream.Write(bytes, 0, bytes.Length);
+                        if (WinMM.waveStream.Length > maxstreamlength)
+                        {
+                            lock (WinMM.synclock)
+                            {
+                                int bytestotransfer = 0;
+                                MemoryStream tmpMemStream = new MemoryStream();
+                                WinMM.waveStream.Position = WinMM.wavepointer;
+                                bytestotransfer = (int)(WinMM.waveStream.Length - WinMM.waveStream.Position);
+                                byte[] buffer2 = new byte[bytestotransfer];
+                                WinMM.waveStream.Read(buffer2, 0, bytestotransfer);
+                                tmpMemStream.Write(buffer2, 0, bytestotransfer);
+                                WinMM.wavepointer = 0;
+                                WinMM.waveStream.Dispose();
+                                WinMM.waveStream = null;
+                                WinMM.waveStream = tmpMemStream;
+                            }
+                        }
                     }
                     WinMM.ThrowExceptionForError(WinMM.waveInAddBuffer(WinMM.phwi, WinMM.unmanagedHeaders[WinMM.currentbuffer], Marshal.SizeOf(typeof(WinMM.WaveHdr))));
                     WinMM.currentbuffer = (WinMM.currentbuffer + 1) % WinMM.buffers.Length;
@@ -520,6 +538,7 @@ namespace SoundCapture
 
     public class CoreAudio : audioCapture
     {
+        public int maxstreamlength = 10000000;
         private readonly Guid GuidEventContext = Guid.NewGuid();
 
         const int DEVICE_STATE_ACTIVE = 0x00000001;

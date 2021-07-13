@@ -83,6 +83,8 @@ body {
   margin-top:5px;
 }
 .controlcontainer {
+  background-color: #8c8c71;
+  background-image: linear-gradient(to bottom right, #17b0de, #8c8c71);
   position:fixed;
   top:0;
   left:0;
@@ -90,6 +92,15 @@ body {
   z-index:20;
   max-height:100vh;
 }
+.controlscontent {
+}
+.controlcontainer {
+  padding-bottom:50px;
+}
+.controlcontainer::-webkit-scrollbar {
+  width: 0px;
+}
+
 .controls {
   position:relative;
   padding-left:10px;
@@ -99,7 +110,9 @@ body {
   background-color:#202020;
   font-size:14px;
   z-index:20;
+  margin: 50px 10px 50px 10px;
 }
+
 .message {
   display:none;
   overflow: scroll;

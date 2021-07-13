@@ -79,7 +79,8 @@ body {
 }
 .controls {
   position:absolute;
-  padding-left:5px;
+  padding-left:10px;
+  padding-right:5px;
   width:100px;
   color:lightgrey;
   background-color:#202020;
@@ -156,4 +157,13 @@ body {
 }
 .settingsbutton {
   text-align:center;
+}
+
+a.controllink:link,a.controllink:visited,a.controllink:hover,a.controllink:active  {
+  color: white;
+  font-weight:bold;
+  text-decoration:none;
+}
+.hidecontrols {
+  margin-top:10px;
 }

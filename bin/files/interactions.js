@@ -291,8 +291,8 @@ function calcdistance(x0,y0,x1,y1) {
 function updatezoom() {
   if (!$(".allowzoom").prop("checked")) {
       allowzoom=false;
-      $("#viewportmeta").attr("content","width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no");
-      $(".content").css("margin-left","0");
+      //$("#viewportmeta").attr("content","width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no");
+      $(".content").css("margin","0");
       $(".content").css("border","none");
       $(".cvdiv").css("top","");
       $(".cvdiv").css("left","");
@@ -300,9 +300,9 @@ function updatezoom() {
       $(".cvdiv").css("-webkit-transform","");
   } else {
       allowzoom=true;
-      $("#viewportmeta").attr("content","width=device-width, initial-scale=0.5");
-      $(".content").css("margin-left","117px");
+      //$("#viewportmeta").attr("content","width=device-width, initial-scale=1m maximum-scale=1");
       $(".content").css("border","2px solid grey");
+      $(".content").css("margin","50px 50px 50px 187px"); //182 with 15 px scrollbar
       $(".cvdiv").css("top","0");
       $(".cvdiv").css("left","0");
       $(".cvdiv").css("transform","none");
@@ -593,7 +593,13 @@ $(document).ready(function() {
 	  updatezoom();
   });
   $(".hidecontrols").click(function() {
-    $(".controls").hide();
+    $(".controls").hide(400);
+    if (allowzoom) {
+		setTimeout(function() {
+			//$(".controlcontainer").css("display","none");
+			$(".content").css("margin","50px 50px 50px 50px");
+		},400);
+	}
   });
   $(".closesettings").click(function() {
 	$(".settings").hide();

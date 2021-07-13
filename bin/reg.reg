@@ -1,0 +1,237 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\AppID\{74F8543F-3F45-4425-9516-223AE0909716}]
+"DllSurrogate"=""
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\AppID\{74F8543F-3F45-4425-9516-223AE0909716}]
+"DllSurrogate"=""
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\AppID\{74F8543F-3F45-4425-9516-223AE0909716}]
+"DllSurrogate"=""
+
+[HKEY_CLASSES_ROOT\AppID\{74F8543F-3F45-4425-9516-223AE0909716}]
+"DllSurrogate"=""
+
+[HKEY_CLASSES_ROOT\Wow6432Node\AppID\{74F8543F-3F45-4425-9516-223AE0909716}]
+"DllSurrogate"=""
+
+
+
+
+[HKEY_CLASSES_ROOT\ApplicationLauncher.Launcher]
+@="ApplicationLauncher.Launcher"
+
+[HKEY_CLASSES_ROOT\ApplicationLauncher.Launcher\CLSID]
+@="{74F8543F-3F45-4425-9516-223AE0909716}"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ApplicationLauncher.Launcher]
+@="ApplicationLauncher.Launcher"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ApplicationLauncher.Launcher\CLSID]
+@="{74F8543F-3F45-4425-9516-223AE0909716}"
+
+
+
+
+
+
+
+[HKEY_CLASSES_ROOT\ApplicationLauncher.CreateProcess]
+@="ApplicationLauncher.CreateProcess"
+
+[HKEY_CLASSES_ROOT\ApplicationLauncher.CreateProcess\CLSID]
+@="{9BF05913-748D-370D-BB46-17507608524A}"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ApplicationLauncher.CreateProcess]
+@="ApplicationLauncher.CreateProcess"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\ApplicationLauncher.CreateProcess\CLSID]
+@="{9BF05913-748D-370D-BB46-17507608524A}"
+
+
+
+
+
+
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}]
+"AppID"="{74F8543F-3F45-4425-9516-223AE0909716}"
+@="ApplicationLauncher.Launcher"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\Implemented Categories]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\Implemented Categories\{62C8FE65-4EBB-45e7-B440-6E39B2CDBF29}]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\InprocServer32]
+@="mscoree.dll"
+"ThreadingModel"="Both"
+"Class"="ApplicationLauncher.Launcher"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\InprocServer32\1.0.0.0]
+"Class"="ApplicationLauncher.Launcher"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\ProgId]
+@="ApplicationLauncher.Launcher"
+
+
+
+
+
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}]
+@="ApplicationLauncher.CreateProcess"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\Implemented Categories]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\Implemented Categories\{62C8FE65-4EBB-45e7-B440-6E39B2CDBF29}]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\InprocServer32]
+@="mscoree.dll"
+"ThreadingModel"="Both"
+"Class"="ApplicationLauncher.CreateProcess"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\InprocServer32\1.0.0.0]
+"Class"="ApplicationLauncher.CreateProcess"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Classes\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\ProgId]
+@="ApplicationLauncher.CreateProcess"
+
+
+
+
+
+
+
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}]
+"AppID"="{74F8543F-3F45-4425-9516-223AE0909716}"
+@="ApplicationLauncher.Launcher"
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\Implemented Categories]
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\Implemented Categories\{62C8FE65-4EBB-45e7-B440-6E39B2CDBF29}]
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\InprocServer32]
+@="mscoree.dll"
+"ThreadingModel"="Both"
+"Class"="ApplicationLauncher.Launcher"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\InprocServer32\1.0.0.0]
+"Class"="ApplicationLauncher.Launcher"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\ProgId]
+@="ApplicationLauncher.Launcher"
+
+
+
+
+
+
+
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}]
+@="ApplicationLauncher.CreateProcess"
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\Implemented Categories]
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\Implemented Categories\{62C8FE65-4EBB-45e7-B440-6E39B2CDBF29}]
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\InprocServer32]
+@="mscoree.dll"
+"ThreadingModel"="Both"
+"Class"="ApplicationLauncher.CreateProcess"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\InprocServer32\1.0.0.0]
+"Class"="ApplicationLauncher.CreateProcess"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\ProgId]
+@="ApplicationLauncher.CreateProcess"
+
+
+
+
+
+
+
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{9BF05913-748D-370D-BB46-17507608524A}]
+@="ApplicationLauncher.CreateProcess"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\Implemented Categories]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\Implemented Categories\{62C8FE65-4EBB-45e7-B440-6E39B2CDBF29}]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\InprocServer32]
+@="mscoree.dll"
+"ThreadingModel"="Both"
+"Class"="ApplicationLauncher.CreateProcess"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\InprocServer32\1.0.0.0]
+"Class"="ApplicationLauncher.CreateProcess"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{9BF05913-748D-370D-BB46-17507608524A}\ProgId]
+@="ApplicationLauncher.CreateProcess"
+
+
+
+
+
+
+
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}]
+"AppID"="{74F8543F-3F45-4425-9516-223AE0909716}"
+@="ApplicationLauncher.Launcher"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\Implemented Categories]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\Implemented Categories\{62C8FE65-4EBB-45e7-B440-6E39B2CDBF29}]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\InprocServer32]
+@="mscoree.dll"
+"ThreadingModel"="Both"
+"Class"="ApplicationLauncher.Launcher"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\InprocServer32\1.0.0.0]
+"Class"="ApplicationLauncher.Launcher"
+"Assembly"="ApplicationLauncher, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+"RuntimeVersion"="v2.0.50727"
+"CodeBase"="file:///C:/web/windows/src/ApplicationLauncher/bin/Release/ApplicationLauncher.dll"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Classes\CLSID\{74F8543F-3F45-4425-9516-223AE0909716}\ProgId]
+@="ApplicationLauncher.Launcher"
+
+

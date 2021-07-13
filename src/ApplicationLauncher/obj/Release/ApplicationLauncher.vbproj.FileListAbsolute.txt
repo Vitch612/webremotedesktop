@@ -25,3 +25,13 @@ C:\web\windows\bin\ApplicationLauncher\obj\Release\Interop.IWshRuntimeLibrary.dl
 C:\web\windows\bin\ApplicationLauncher\obj\Release\ApplicationLauncher.vbproj.ResolveComReference.cache
 C:\web\windows\bin\ApplicationLauncher\obj\Release\ApplicationLauncher.dll
 C:\web\windows\bin\ApplicationLauncher\obj\Release\ApplicationLauncher.pdb
+C:\web\windows\src\ApplicationLauncher\bin\Release\ApplicationLauncher.dll.config
+C:\web\windows\src\ApplicationLauncher\bin\Release\ApplicationLauncher.dll
+C:\web\windows\src\ApplicationLauncher\bin\Release\ApplicationLauncher.pdb
+C:\web\windows\src\ApplicationLauncher\bin\Release\ApplicationLauncher.tlb
+C:\web\windows\src\ApplicationLauncher\bin\Release\Interop.IWshRuntimeLibrary.dll
+C:\web\windows\src\ApplicationLauncher\obj\Release\Interop.IWshRuntimeLibrary.dll
+C:\web\windows\src\ApplicationLauncher\obj\Release\ApplicationLauncher.vbproj.ResolveComReference.cache
+C:\web\windows\src\ApplicationLauncher\obj\Release\ApplicationLauncher.dll
+C:\web\windows\src\ApplicationLauncher\obj\Release\ApplicationLauncher.pdb
+C:\web\windows\src\ApplicationLauncher\obj\Release\ApplicationLauncher.vbprojAssemblyReference.cache

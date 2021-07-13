@@ -10,3 +10,4 @@ C:\web\windows\src\WebDesktop\SoundCapture\bin\Debug\SoundCapture.dll
 C:\web\windows\src\WebDesktop\SoundCapture\bin\Debug\SoundCapture.pdb
 C:\web\windows\src\WebDesktop\SoundCapture\obj\Debug\SoundCapture.dll
 C:\web\windows\src\WebDesktop\SoundCapture\obj\Debug\SoundCapture.pdb
+C:\web\windows\src\WebDesktop\SoundCapture\obj\Debug\SoundCapture.csproj.CoreCompileInputs.cache
